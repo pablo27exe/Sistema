@@ -1,4 +1,5 @@
 import flet as ft
+#from qr import *
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -6,18 +7,23 @@ def main(page: ft.Page):
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
     
-    # Función para cerrar diálogo
-    def cerrar_dialogo(dialog):
+    # ===== FUNCIONES AUXILIARES =====
+    def cerrar_dialogo(dialog): #permite que al dar clic en el botón de aceptar de cada cuadro de dialogo se pueda cerrar
         dialog.open = False
         page.update()
     
-    # Función para mostrar ventana emergente
-    def mostrar_proceso(mensaje):
-        dialog = ft.AlertDialog(
-            title=ft.Text("Proceso iniciado"),
-            content=ft.Text(mensaje),
+    def crear_dialogo(titulo, mensaje, tipo="info"): #diseñar el estilo del cuadro de dialogo
+        """Crea un diálogo estandarizado"""
+        colores = {  #cuando se trata de cierto tipo de mensaje en el dialogo mostrará un color diferente para indicar de que tipo se trata
+            "error": ft.Colors.RED,
+            "exito": ft.Colors.GREEN,
+            "info": ft.Colors.BLUE
+        }
+        dialog = ft.AlertDialog( #Se crea el dialogo
+            title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
+            content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
             actions=[
-                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
+                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)), #permite incorporar un boton que manda a llamar la funcion de cerrar el dialogo
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -25,157 +31,96 @@ def main(page: ft.Page):
         dialog.open = True
         page.update()
     
-    # Función para los botones de verificación
+    def crear_boton_verificacion(texto, icono, color_fondo, on_click):
+        """Crea un botón estandarizado para verificación"""
+        return ft.ElevatedButton(
+            content=ft.Row(
+                [
+                    ft.Image(src=icono, width=60, height=60),
+                    ft.Text(texto, size=17, weight="bold"),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=10,
+            ),
+            width=300, 
+            height=100, 
+            bgcolor=color_fondo,
+            on_click=on_click,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=5),
+            ),
+        )
+    
+    def crear_container_formulario(titulo, elementos):
+        """Crea un container estandarizado para formularios"""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(titulo, size=30, weight="bold"),
+                    *elementos,  
+                ],
+                horizontal_alignment="center",
+                spacing=10 #if "REGISTRO" in titulo else 15,
+            ),
+            padding=30,
+            bgcolor="white",
+            border_radius=50,
+            width=400,
+        )
+    
+    # ===== FUNCIONES DE VERIFICACIÓN =====
+    #en versiones futuras permitirá el poder implementar scripts para cada uno de los procesos, por ahora solo muestra un mensaje para indicar que todo va bien
     def qr_clicked(e):
-        mostrar_proceso("Iniciando proceso de escaneo QR...")
+        crear_dialogo("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info")
+        
     
     def llave_clicked(e):
-        mostrar_proceso("Iniciando proceso de verificación por llave...")
+        crear_dialogo("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info")
     
     def facial_clicked(e):
-        mostrar_proceso("Iniciando proceso de reconocimiento facial...")
+        crear_dialogo("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info")
     
-    # Página 3: Métodos de verificación
+    # ===== PÁGINA 3: VERIFICACIÓN =====
     def mostrar_verificacion():
         page.clean()
         
-        verificacion_container = ft.Container(
-            content=ft.Column([
-                ft.Text("SEGUNDO MÉTODO DE VERIFICACIÓN", size=24, weight="bold",text_align="center"),
-                ft.Text("Elige una opción de verificación:", size=16),
-                ft.Container(height=20),
-                
-                # Botón QR
-                ft.ElevatedButton(
-                    content=ft.Row(
-                        [
-                            ft.Image(
-                                src="QR.ico", 
-                                width=60,
-                                height=60,
-                            ),
-                            ft.Text("Obtener QR", size=17),
-                        ],
-                        
-                    ),
-                    width=300, height= 100, bgcolor="white",        
-                    on_click=qr_clicked,
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=5),
-                        ),
-                ),
-                ft.Container(height=10),
-                
-                # Botón Llave
-                ft.ElevatedButton(
-                    content=ft.Row(
-                        [
-                            ft.Image(
-                                src="USB.ico", 
-                                width=60,
-                                height=60,
-                            ),
-                            ft.Text("Obtener llave", size=17),
-                        ],
-                        alignment=ft.MainAxisAlignment.START,
-                        spacing=10,
-                    ),
-                    width=300, height= 100, bgcolor="white",   
-                    on_click=llave_clicked,
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=5),
-                        ),
-                ),
-                ft.Container(height=10),
-                
-                # Botón Reconocimiento facial
-                ft.ElevatedButton(
-                    content=ft.Row(
-                        [
-                            ft.Image(
-                                src="FACE.ico", 
-                                width=60,
-                                height=60,
-                            ),
-                            ft.Text("Reconocimiento facial", size=17),
-                        ],
-                        alignment=ft.MainAxisAlignment.START,
-                        spacing=10,
-                    ),
-                    width=300, height=100, bgcolor="white",
-                    on_click=facial_clicked,
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=5),
-                    ),
-                ),
-                ft.Container(height=20),
-                
-                ft.TextButton(
-                    content=ft.Text("Volver al inicio"),
-                    on_click=lambda _: mostrar_login(),
-                    ),
-                ], 
-                horizontal_alignment="center",
-                spacing=5),
-
-                padding=30,
-                bgcolor="white",
-                border_radius=50,
-                width=400,
-                )
-
+        botones = [
+            crear_boton_verificacion("Obtener QR", "QR.ico", "blue", qr_clicked),
+            
+            crear_boton_verificacion("Obtener llave", "USB.ico", "white", llave_clicked),
+            
+            crear_boton_verificacion("Reconocimiento facial", "FACE.ico", "white", facial_clicked),
+        ]
         
+        elementos = [
+            ft.Text("SEGUNDO MÉTODO DE VERIFICACIÓN", size=24, weight="bold", text_align="center"),
+            ft.Text("Elige una opción de verificación:", size=16),
+            ft.Container(height=20),
+            *botones,
+            ft.Container(height=20),
+            ft.TextButton(
+                content=ft.Text("Volver al inicio"),
+                on_click=lambda _: mostrar_login(),
+            ),
+        ]
+        
+        verificacion_container = crear_container_formulario("", elementos)
         page.add(verificacion_container)
         page.update()
     
-    # Función para la página de registro exitoso
+    # ===== PÁGINA 2: REGISTRO =====
     def registro_exitoso(e):
-        # Verificar que las contraseñas coincidan
         if password1.value != password2.value:
-            dialog = ft.AlertDialog(
-                title=ft.Text("Error"),
-                content=ft.Text("Las contraseñas no coinciden"),
-                actions=[
-                    ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
-            page.overlay.append(dialog)
-            dialog.open = True
-            page.update()
+            crear_dialogo("Error", "Las contraseñas no coinciden", "error")
             return
         
-        if not usuario.value or not nombre.value or not password1.value:
-            dialog = ft.AlertDialog(
-                title=ft.Text("Error"),
-                content=ft.Text("Todos los campos son obligatorios"),
-                actions=[
-                    ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
-            page.overlay.append(dialog)
-            dialog.open = True
-            page.update()
+        if not all([usuario.value, nombre.value, password1.value]):
+            crear_dialogo("Error", "Todos los campos son obligatorios", "error")
             return
         
-        # Mostrar mensaje de éxito
-        dialog = ft.AlertDialog(
-            title=ft.Text("Registro exitoso"),
-            content=ft.Text(f"Bienvenido {nombre.value}. Ahora elige tu método de verificación."),
-            actions=[
-                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        page.overlay.append(dialog)
-        dialog.open = True
-        page.update()
-        
-        # Ir a la página de verificación
+        crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
         mostrar_verificacion()
     
-    # Página 2: Formulario de registro
     def mostrar_registro(e):
         page.clean()
         
@@ -185,84 +130,58 @@ def main(page: ft.Page):
         password1 = ft.TextField(label="Contraseña", password=True, width=300)
         password2 = ft.TextField(label="Confirmar contraseña", password=True, width=300)
         
-        registro_container = ft.Container(
-            content=ft.Column([
-                ft.Text("REGISTRO DE USUARIO", size=30, weight="bold"),
-                usuario,
-                nombre,
-                password1,
-                password2,
-                ft.ElevatedButton(
-                    content=ft.Text("Finalizar registro"),
-                    width=300,
-                    bgcolor="green",
-                    on_click=registro_exitoso,
-                ),
-                ft.TextButton(
-                    content=ft.Text("Volver al inicio"),
-                    on_click=lambda _: mostrar_login(),
-                ),
-            ], 
-            horizontal_alignment="center",
-            spacing=10),
-            padding=30,
-            bgcolor="white",
-            border_radius=50,
-            width=400,
-        )
+        elementos = [
+            usuario,
+            nombre,
+            password1,
+            password2,
+            ft.ElevatedButton(
+                content=ft.Text("Finalizar registro"),
+                width=300,
+                bgcolor="green",
+                on_click=registro_exitoso,
+            ),
+            ft.TextButton(
+                content=ft.Text("Volver al inicio"),
+                on_click=lambda _: mostrar_login(),
+            ),
+        ]
         
+        registro_container = crear_container_formulario("REGISTRO DE USUARIO", elementos)
         page.add(registro_container)
         page.update()
     
-    # Página 1: Login
+    # ===== PÁGINA 1: LOGIN =====
     def acceso(e):
         if not usuario.value:
-            dialog = ft.AlertDialog(
-                title=ft.Text("Error"),
-                content=ft.Text("Favor de ingresar un usuario"),
-                actions=[
-                    ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
-            page.overlay.append(dialog)
-            dialog.open = True
-            page.update()
+            crear_dialogo("Error", "Favor de ingresar un usuario", "error")
             return
     
     def mostrar_login():
         page.clean()
         
         global usuario
-        usuario= ft.TextField(label="Usuario", width=300)
+        usuario = ft.TextField(label="Usuario", width=300)
         
-        login_container = ft.Container(
-            content=ft.Column([
-                ft.Text("INICIAR SESIÓN", size=30, weight="bold"),
-                usuario,
-                ft.ElevatedButton(
-                    content=ft.Text("Ingresar"),
-                    width=300,
-                    bgcolor="blue",
-                    on_click=acceso
-                ),
-                ft.TextButton(
-                    content=ft.Text("¿No estoy registrado? Regístrate aquí"),
-                    on_click=mostrar_registro,
-                ),
-            ], 
-            horizontal_alignment="center",
-            spacing=15),
-            padding=30,
-            bgcolor="white",
-            border_radius=50,
-            width=400,
-        )
+        elementos = [
+            usuario,
+            ft.ElevatedButton(
+                content=ft.Text("Ingresar"),
+                width=300,
+                bgcolor="blue",
+                on_click=acceso
+            ),
+            ft.TextButton(
+                content=ft.Text("¿No estoy registrado? Regístrate aquí"),
+                on_click=mostrar_registro,
+            ),
+        ]
         
+        login_container = crear_container_formulario("INICIAR SESIÓN", elementos)
         page.add(login_container)
         page.update()
     
-    # Iniciar con la página de login
+    # Iniciar aplicación
     mostrar_login()
 
 ft.app(target=main, assets_dir="assets")
