@@ -28,3 +28,4 @@ Aplicación desarrollada con Flet que proporciona una interfaz para:
 
 ## Notas
 Este proyecto actualmente implementa solo la interfaz de usuario. La lógica de autenticación y base de datos se integrará en futuras versiones.
+18.02.26: Se implementó una primera versión que permite generar un QR y enviarlo por Bluetooth
