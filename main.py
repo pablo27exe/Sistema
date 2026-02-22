@@ -1,8 +1,9 @@
 import flet as ft
-from qro import enviar_qr_por_bluetooth
 import threading
+import time
+from qro import enviar_qr_por_bluetooth
+from face import SistemaAutenticacionFacial
 
-# Aquí va tu código del menú
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -11,10 +12,23 @@ def main(page: ft.Page):
     page.vertical_alignment = "center"
     
     dialogo_actual = None
+    usuario_actual = None
+    
+    """Configuración de BD
+    DB_CONFIG = {
+        'host': 'localhost',
+        'data_base': 'bd',
+        'user': 'usuario',
+        'password': 'contraseña'
+        }"""
+        
+    #variable global para simular usuarios
+    next_user_id = 1
+    usuarios_registrados = {}
     
     # ===== FUNCIONES AUXILIARES =====
     def cerrar_dialogo(dialog): #permite que al dar clic en el botón de aceptar de cada cuadro de dialogo se pueda cerrar
-        if dialog:  # <-- Verificar que exista
+        if dialog:  # Verificar que exista
             dialog.open = False
             page.update()
     
@@ -27,7 +41,7 @@ def main(page: ft.Page):
             "exito": ft.Colors.GREEN,
             "info": ft.Colors.BLUE
         }
-        dialog = ft.AlertDialog( #Se crea el dialogo
+        dialog = ft.AlertDialog( #Se crea el dialogo             
             title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
             content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
             actions=[
@@ -40,6 +54,99 @@ def main(page: ft.Page):
         dialog.open = True
         page.update()
         return dialog
+    
+    def crear_dialogo_con_imagen(icono,titulo, mensaje, tipo="info"): #diseñar el estilo del cuadro de dialogo
+        """Crea un diálogo estandarizado"""
+        
+        nonlocal dialogo_actual
+        colores = {  #cuando se trata de cierto tipo de mensaje en el dialogo mostrará un color diferente para indicar de que tipo se trata
+            "error": ft.Colors.RED,
+            "exito": ft.Colors.GREEN,
+            "info": ft.Colors.BLUE
+        }
+        dialog = ft.AlertDialog( #Se crea el dialogo
+            icon=ft.Image(src=icono,width=60, height=60),      
+            title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
+            content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
+            actions=[
+                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)), #permite incorporar un boton que manda a llamar la funcion de cerrar el dialogo
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        dialogo_actual = dialog
+        page.overlay.append(dialog)
+        dialog.open = True
+        page.update()
+        return dialog
+    
+    def crear_dialogo_automatico(titulo, mensaje, tipo="info", duracion = 2): #diseñar el estilo del cuadro de dialogo
+        """Crea un diálogo estandarizado"""
+        
+        nonlocal dialogo_actual
+        colores = {  #cuando se trata de cierto tipo de mensaje en el dialogo mostrará un color diferente para indicar de que tipo se trata
+            "info": ft.Colors.BLUE
+        }
+        dialog = ft.AlertDialog( #Se crea el dialogo
+            title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
+            content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
+            actions=[],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        dialogo_actual = dialog
+        page.overlay.append(dialog)
+        dialog.open = True
+        page.update()
+        
+        def cerrar_dialogo_automatico():
+            time.sleep(duracion)
+            page.run_thread(lambda: cerrar_dialogo(dialog))
+            
+        hilo_cierre = threading.Thread(target=cerrar_dialogo_automatico, daemon=True)
+        hilo_cierre.start()
+        return dialog
+    
+        
+    
+    #def guardar_usuario_bd(usuario_data):
+    #     """Guarda usuario en PostgreSQL"""
+    #     conn = psycopg2.connect(**DB_CONFIG)
+    #     try:
+    #         with conn.cursor() as cur:
+    #             cur.execute("""
+    #                 INSERT INTO usuarios (username, nombre_completo, password_hash, fecha_registro)
+    #                 VALUES (%s, %s, %s, NOW())
+    #                 RETURNING id
+    #             """, (
+    #                 usuario_data['username'],
+    #                 usuario_data['nombre'],
+    #                 usuario_data['password']  # Idealmente deberías hashearla
+    #             ))
+    #             usuario_id = cur.fetchone()[0]
+    #             conn.commit()
+    #             return usuario_id
+    #     except Exception as e:
+    #         print(f"Error guardando usuario: {e}")
+    #         conn.rollback()
+    #         return None
+    #     finally:
+    #         conn.close()
+    
+    def guardar_usuario_local(usuario_data):
+        """Versión local sin BD - guarda en diccionario"""
+        nonlocal next_user_id
+        
+        usuario_id = next_user_id
+        next_user_id += 1
+        
+        usuarios_registrados[usuario_id] = {
+            'username': usuario_data['username'],
+            'nombre': usuario_data['nombre'],
+            'password': usuario_data['password'], 
+            #'fecha_registro': None  usar datetime.now()
+        }
+        
+        print(f"Usuario guardado localmente: ID {usuario_id} - {usuario_data['username']}")
+        return usuario_id
     
     def proceso_segundo_plano():
         try: 
@@ -101,20 +208,28 @@ def main(page: ft.Page):
     # ===== FUNCIONES DE VERIFICACIÓN =====
     #en versiones futuras permitirá el poder implementar scripts para cada uno de los procesos, por ahora solo muestra un mensaje para indicar que todo va bien
     def qr_clicked(e):
-        crear_dialogo("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info")
-        
+        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info") 
         hilo = threading.Thread(target=proceso_segundo_plano, daemon=True)
         hilo.start()
         
     
     def llave_clicked(e):
-        crear_dialogo("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info")
+        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info")
     
     def facial_clicked(e):
-        crear_dialogo("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info")
+        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info", duracion=2)
+        
+        def mostrar_segundo_dialogo():
+            time.sleep(2.2)
+            page.run_thread(lambda: crear_dialogo_con_imagen("FACE.ico","Instrucciones","","info"))
+            
+        hilo_dialogo = threading.Thread(target=mostrar_segundo_dialogo, daemon=True)
+        hilo_dialogo.start()
     
     # ===== PÁGINA 3: VERIFICACIÓN =====
-    def mostrar_verificacion():
+    def mostrar_verificacion(usuario_data):
+        global usuario_actual
+        usuario_actual = usuario_data
         page.clean()
         
         botones = [
@@ -151,9 +266,26 @@ def main(page: ft.Page):
             crear_dialogo("Error", "Todos los campos son obligatorios", "error")
             return
         
-        crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
-        mostrar_verificacion()
+        #diccionario con datos del usuario
+        usuario_data = {
+            'username': usuario.value,
+            'nombre': nombre.value,
+            'password': password1.value
+        }
+        
+        usuario_id = guardar_usuario_local(usuario_data)
+        #usuario_id = guardar_usuario_bd(usuario_data)
+        
+        if usuario_id:
+            usuario_data['id'] = usuario_id
+            
+            crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
+            mostrar_verificacion(usuario_data)
+        else:
+            crear_dialogo("Error", "No se pudo guardar el usuario", "error")
     
+
+        
     def mostrar_registro(e):
         page.clean()
         

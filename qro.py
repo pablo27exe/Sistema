@@ -4,12 +4,11 @@ import subprocess
 import tempfile
 import threading
 import time
-
 import qrcode
 
 
 # ── Configuración de rutas ──────────────────────────────────────────────────
-CARPETA_TEMP = tempfile.gettempdir()          # %TEMP% del sistema → acceso rápido
+CARPETA_TEMP = tempfile.gettempdir()
 
 
 # ── Generador de contraseña ─────────────────────────────────────────────────
@@ -55,7 +54,7 @@ def enviar_por_bluetooth(ruta_archivo: str) -> tuple[bool, str]:
 
     ruta_completa = os.path.abspath(ruta_archivo)
 
-    # Intento 1: asistente nativo de Bluetooth
+    # 1: asistente nativo de Bluetooth
     resultado = subprocess.run(
         f'fsquirt -send "{ruta_completa}"',
         shell=True,
@@ -65,7 +64,7 @@ def enviar_por_bluetooth(ruta_archivo: str) -> tuple[bool, str]:
         print("Asistente de Bluetooth abierto correctamente.")
         return True, "Asistente de Bluetooth abierto"
 
-    # Intento 2: abrir carpeta con el archivo seleccionado
+    # 2: abrir carpeta con el archivo seleccionado
     print("fsquirt no disponible — abriendo carpeta para envío manual.")
     subprocess.run(f'explorer /select,"{ruta_completa}"', shell=True)
     return True, "Archivo listo para compartir manualmente"
@@ -100,7 +99,7 @@ class RegistroContrasena:
             "fecha": datetime.now().isoformat(),
         }
         self._registros.append(registro)
-        # Aquí irá el registro en la base de datos aquí
+        # Aquí irá el registro en la base de datos
         return registro
 
     def obtener_todos(self) -> list[dict]:
