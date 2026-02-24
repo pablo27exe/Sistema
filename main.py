@@ -55,7 +55,7 @@ def main(page: ft.Page):
         page.update()
         return dialog
     
-    def crear_dialogo_con_imagen(icono,titulo, mensaje, tipo="info"): #diseñar el estilo del cuadro de dialogo
+    def crear_dialogo_con_imagen(icono,titulo, mensaje, tipo="info", usuario_data=None): #diseñar el estilo del cuadro de dialogo
         """Crea un diálogo estandarizado"""
         
         nonlocal dialogo_actual
@@ -64,12 +64,37 @@ def main(page: ft.Page):
             "exito": ft.Colors.GREEN,
             "info": ft.Colors.BLUE
         }
+        
+        if usuario_data is None:
+            print("Error: No se proporcionaron datos de usuario")
+            return None
+        
+        sistema_facial = SistemaAutenticacionFacial()
+            
+        def iniciar_proceso_facial(e):
+            cerrar_dialogo(dialog)
+            
+            def proceso_captura():
+                try:
+                    success, mensaje = sistema_facial.capturar_rostro_auto(usuario_id=usuario_data['id'], nombre_usuario=usuario_data['username'])
+                    
+                    if success:
+                        print("captura exitosa")
+                    else:
+                        print(f"Error: {mensaje}")
+                
+                except Exception as e:
+                    print(f"Error: {e}")
+                    
+            hilo = threading.Thread(target=proceso_captura, daemon= True)
+            hilo.start()
+             
         dialog = ft.AlertDialog( #Se crea el dialogo
             icon=ft.Image(src=icono,width=60, height=60),      
             title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
             content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
             actions=[
-                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)), #permite incorporar un boton que manda a llamar la funcion de cerrar el dialogo
+                ft.TextButton("Iniciar", on_click=iniciar_proceso_facial), #permite incorporar un boton que manda a llamar la funcion de cerrar el dialogo
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -217,19 +242,30 @@ def main(page: ft.Page):
         crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info")
     
     def facial_clicked(e):
+        nonlocal usuario_actual
+        if usuario_actual is None:
+            crear_dialogo("Error", "No hay usuario seleccionado", "error")
+            return
+    
+        # Guardar referencia local para evitar problemas de concurrencia
+        datos_usuario = usuario_actual.copy()
+        
         crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info", duracion=2)
         
         def mostrar_segundo_dialogo():
             time.sleep(2.2)
-            page.run_thread(lambda: crear_dialogo_con_imagen("FACE.ico","Instrucciones","","info"))
+            page.run_thread(lambda: crear_dialogo_con_imagen("FACE.ico","Instrucciones","• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado\n• La captura será automática","info",datos_usuario))
             
         hilo_dialogo = threading.Thread(target=mostrar_segundo_dialogo, daemon=True)
         hilo_dialogo.start()
+        
+        
     
     # ===== PÁGINA 3: VERIFICACIÓN =====
     def mostrar_verificacion(usuario_data):
-        global usuario_actual
+        nonlocal usuario_actual
         usuario_actual = usuario_data
+        print(f"Usuario actual establecido: {usuario_actual}")  # Debug
         page.clean()
         
         botones = [

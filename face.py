@@ -10,6 +10,19 @@ from datetime import datetime
 # import psycopg2
 # from psycopg2.extras import Json
 
+
+def superponer_imagen(frame, imagen_rgba, x, y, w, h):
+    """Superpone un PNG con transparencia sobre el frame en la posición del rostro"""
+    imagen_redim = cv2.resize(imagen_rgba, (w, h))
+    bgr   = imagen_redim[:, :, :3]
+    alpha = imagen_redim[:, :, 3] / 255.0
+    region = frame[y:y+h, x:x+w]
+    for c in range(3):
+        region[:, :, c] = (alpha * bgr[:, :, c] + (1 - alpha) * region[:, :, c])
+    frame[y:y+h, x:x+w] = region
+    return frame
+
+
 class SistemaAutenticacionFacial:
     def __init__(self):
         """Constructor de la clase"""
@@ -114,6 +127,8 @@ class SistemaAutenticacionFacial:
             
         camara.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         camara.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        icono_marco = cv2.imread("cv_resources/marco_rostro.png", cv2.IMREAD_UNCHANGED)
         
         rostros = []
         capturas = 0
@@ -138,7 +153,10 @@ class SistemaAutenticacionFacial:
             
             # Dibujo de detecciones
             for (x, y, w, h) in rostros_detectados:
-                cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                if icono_marco is not None:
+                    frame_mostrar = superponer_imagen(frame_mostrar, icono_marco, x, y, w, h)
+                else:
+                    cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
             
             # Mostrar contador
             cv2.putText(frame_mostrar, f"Capturas: {capturas}/{capturas_requeridas}", 
@@ -230,6 +248,8 @@ class SistemaAutenticacionFacial:
         
         camara.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         camara.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        icono_marco = cv2.imread("cv_resources/marco_rostro.png", cv2.IMREAD_UNCHANGED)
         
         tiempo_inicio = time.time()
         verificado = False
@@ -252,7 +272,10 @@ class SistemaAutenticacionFacial:
             frame_mostrar = frame.copy()
             
             for (x, y, w, h) in rostros_detectados:
-                cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                if icono_marco is not None:
+                    frame_mostrar = superponer_imagen(frame_mostrar, icono_marco, x, y, w, h)
+                else:
+                    cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
                 
                 # Si hay un rostro, intentar reconocer
                 region_rostro = gris[y:y+h, x:x+w]
