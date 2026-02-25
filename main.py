@@ -3,6 +3,7 @@ import threading
 import time
 from qro import enviar_qr_por_bluetooth
 from face import SistemaAutenticacionFacial
+from usb import generar_y_guardar_llave, obtener_unidades_usb, registrar_llave_usb
 
 
 def main(page: ft.Page):
@@ -55,7 +56,7 @@ def main(page: ft.Page):
         page.update()
         return dialog
     
-    def crear_dialogo_con_imagen(icono,titulo, mensaje, tipo="info", usuario_data=None): #diseñar el estilo del cuadro de dialogo
+    def crear_dialogo_con_imagen(icono,titulo, mensaje, tipo="info", on_iniciar=None): #diseñar el estilo del cuadro de dialogo
         """Crea un diálogo estandarizado"""
         
         nonlocal dialogo_actual
@@ -65,37 +66,20 @@ def main(page: ft.Page):
             "info": ft.Colors.BLUE
         }
         
-        if usuario_data is None:
-            print("Error: No se proporcionaron datos de usuario")
-            return None
-        
-        sistema_facial = SistemaAutenticacionFacial()
-            
-        def iniciar_proceso_facial(e):
+        def inicio(e):
             cerrar_dialogo(dialog)
-            
-            def proceso_captura():
-                try:
-                    success, mensaje = sistema_facial.capturar_rostro_auto(usuario_id=usuario_data['id'], nombre_usuario=usuario_data['username'])
-                    
-                    if success:
-                        print("captura exitosa")
-                    else:
-                        print(f"Error: {mensaje}")
+            if on_iniciar:
+                on_iniciar()
                 
-                except Exception as e:
-                    print(f"Error: {e}")
-                    
-            hilo = threading.Thread(target=proceso_captura, daemon= True)
-            hilo.start()
+        acciones = [ft.TextButton("Cancelar", on_click=lambda e: cerrar_dialogo(dialog))]
+        if on_iniciar:
+          acciones.insert(0, ft.TextButton("Iniciar", on_click=inicio))    
              
         dialog = ft.AlertDialog( #Se crea el dialogo
             icon=ft.Image(src=icono,width=60, height=60),      
             title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)), #El titulo será con base a una variable llamda titulo que se usa cuando se manda a llamar el cuadro de dialogo en diferentes partes
             content=ft.Text(mensaje), #El contenido se almacena en una variable llamada mensaje la cual mostrará la información del cuadro de dialogo
-            actions=[
-                ft.TextButton("Iniciar", on_click=iniciar_proceso_facial), #permite incorporar un boton que manda a llamar la funcion de cerrar el dialogo
-            ],
+            actions=acciones,
             actions_alignment=ft.MainAxisAlignment.END,
         )
         dialogo_actual = dialog
@@ -239,25 +223,77 @@ def main(page: ft.Page):
         
     
     def llave_clicked(e):
-        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info")
-    
+        nonlocal usuario_actual
+        if usuario_actual is None:
+            crear_dialogo("Error", "No hay usuario seleccionado", "error")
+            return
+
+        datos_usuario = usuario_actual.copy()
+        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info", duracion=2)
+
+        def on_usb_encontrado(usb_path, confirmar_y_generar):
+            def mostrar_confirmacion():
+                crear_dialogo_con_imagen(
+                    "USB.ico",
+                    "USB detectado",
+                    f"Se generará la llave en: {usb_path}\nPresiona Iniciar para continuar.",
+                    "info",
+                    on_iniciar=confirmar_y_generar
+                )
+            page.run_thread(mostrar_confirmacion)
+
+        def on_success(mensaje):
+            page.run_thread(lambda: crear_dialogo("Llave generada", mensaje, "exito"))
+
+        def on_error(mensaje):
+            page.run_thread(lambda: crear_dialogo("Error", mensaje, "error"))
+
+        def ejecutar():
+            time.sleep(2.2)
+            registrar_llave_usb(datos_usuario['username'], on_success, on_error, on_usb_encontrado)
+
+        threading.Thread(target=ejecutar, daemon=True).start()
+
+    # ─── Modificación de facial_clicked (sin cambios en lógica, solo usa el nuevo crear_dialogo_con_imagen) ──
+
     def facial_clicked(e):
         nonlocal usuario_actual
         if usuario_actual is None:
             crear_dialogo("Error", "No hay usuario seleccionado", "error")
             return
-    
-        # Guardar referencia local para evitar problemas de concurrencia
+
         datos_usuario = usuario_actual.copy()
-        
         crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info", duracion=2)
-        
+
         def mostrar_segundo_dialogo():
             time.sleep(2.2)
-            page.run_thread(lambda: crear_dialogo_con_imagen("FACE.ico","Instrucciones","• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado\n• La captura será automática","info",datos_usuario))
-            
-        hilo_dialogo = threading.Thread(target=mostrar_segundo_dialogo, daemon=True)
-        hilo_dialogo.start()
+
+            def on_iniciar_facial():
+                sistema_facial = SistemaAutenticacionFacial()
+                def proceso_captura():
+                    try:
+                        success, mensaje = sistema_facial.capturar_rostro_auto(
+                            usuario_id=datos_usuario['id'],
+                            nombre_usuario=datos_usuario['username']
+                        )
+                        if success:
+                            print("Captura exitosa")
+                        else:
+                            print(f"Error: {mensaje}")
+                    except Exception as ex:
+                        print(f"Error: {ex}")
+
+                threading.Thread(target=proceso_captura, daemon=True).start()
+
+            page.run_thread(lambda: crear_dialogo_con_imagen(
+                "FACE.ico",
+                "Instrucciones",
+                "• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado\n• La captura será automática",
+                "info",
+                on_iniciar=on_iniciar_facial
+            ))
+
+        threading.Thread(target=mostrar_segundo_dialogo, daemon=True).start()
         
         
     
@@ -328,8 +364,8 @@ def main(page: ft.Page):
         global usuario, nombre, password1, password2
         usuario = ft.TextField(label="Usuario", width=300)
         nombre = ft.TextField(label="Nombre completo", width=300)
-        password1 = ft.TextField(label="Contraseña", password=True, width=300)
-        password2 = ft.TextField(label="Confirmar contraseña", password=True, width=300)
+        password1 = ft.TextField(label="Contraseña", password=True, width=300,can_reveal_password=True,)
+        password2 = ft.TextField(label="Confirmar contraseña", password=True, width=300,can_reveal_password=True,)
         
         elementos = [
             usuario,
