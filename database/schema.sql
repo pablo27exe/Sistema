@@ -1,3 +1,4 @@
+--==========================Crear Tablas==========================
 -- Extensión para generar UUIDs
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -31,6 +32,9 @@ CREATE TABLE metodos_segundo_factor (
     dato_factor   TEXT,
     registrado_en TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
+
+
+--==========================================================================
 
 -- Índice para consultar la llave USB activa de un usuario rápidamente
 CREATE UNIQUE INDEX uq_usb_activo_por_usuario

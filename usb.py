@@ -1,4 +1,5 @@
 import os
+import webbrowser
 import bcrypt
 from pathlib import Path
 from cryptography.hazmat.primitives import hashes, serialization
@@ -69,6 +70,8 @@ def registrar_llave_usb(username: str, on_success, on_error, on_usb_encontrado):
                 USERS_DB[username]["tiene_usb"] = True
                 
                 on_success(f"Llave guardada en: {usb_path}")
+                
+                webbrowser.open(usb_path)
                 
             except PermissionError:
                 on_error("Sin permisos para escribir en el USB. Intenta como administrador.")

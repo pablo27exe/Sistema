@@ -113,9 +113,7 @@ def main(page: ft.Page):
         hilo_cierre = threading.Thread(target=cerrar_dialogo_automatico, daemon=True)
         hilo_cierre.start()
         return dialog
-    
-        
-    
+     
     #def guardar_usuario_bd(usuario_data):
     #     """Guarda usuario en PostgreSQL"""
     #     conn = psycopg2.connect(**DB_CONFIG)
@@ -128,7 +126,7 @@ def main(page: ft.Page):
     #             """, (
     #                 usuario_data['username'],
     #                 usuario_data['nombre'],
-    #                 usuario_data['password']  # Idealmente deberías hashearla
+    #                 usuario_data['password']  # hashearla
     #             ))
     #             usuario_id = cur.fetchone()[0]
     #             conn.commit()
@@ -254,7 +252,7 @@ def main(page: ft.Page):
 
         threading.Thread(target=ejecutar, daemon=True).start()
 
-    # ─── Modificación de facial_clicked (sin cambios en lógica, solo usa el nuevo crear_dialogo_con_imagen) ──
+    # ─── Función para el evento de facial_clicked  (crear_dialogo_con_imagen) ──
 
     def facial_clicked(e):
         nonlocal usuario_actual
@@ -295,8 +293,6 @@ def main(page: ft.Page):
 
         threading.Thread(target=mostrar_segundo_dialogo, daemon=True).start()
         
-        
-    
     # ===== PÁGINA 3: VERIFICACIÓN =====
     def mostrar_verificacion(usuario_data):
         nonlocal usuario_actual
@@ -355,9 +351,7 @@ def main(page: ft.Page):
             mostrar_verificacion(usuario_data)
         else:
             crear_dialogo("Error", "No se pudo guardar el usuario", "error")
-    
-
-        
+      
     def mostrar_registro(e):
         page.clean()
         
