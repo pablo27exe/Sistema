@@ -1,10 +1,15 @@
 import flet as ft
 import threading
 import time
+
+#importar los modulos de los scripts
 from qro import enviar_qr_por_bluetooth
 from face import SistemaAutenticacionFacial
 from usb import generar_y_guardar_llave, obtener_unidades_usb, registrar_llave_usb
 
+#modulos de la base de datos
+from usuarios import insertar_usuario, obtener_usario_por_usuario
+from credenciales import insertar_credencial, obtener_credencial_por_usuario
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -334,25 +339,42 @@ def main(page: ft.Page):
         
         if not all([usuario.value, nombre.value, password1.value]):
             crear_dialogo("Error", "Todos los campos son obligatorios", "error")
+            
+            
+        #Verificar que el usuario ya existe en la base de datos
+        if obtener_usario_por_usuario(usuario.value):
+            crear_dialogo("Error", "El usuario ya existe", "error")
             return
         
-        #diccionario con datos del usuario
+        #1. Insertar en la tabla de usuarios (antes, se guardaba en un diccionario con datos del usuario)
+        usuario_id = insertar_usuario(
+            nombre=nombre.value,
+            nombre_usuario=usuario.value
+        )
+
+        if not usuario_id:
+            crear_dialogo("Error", "No se pudo guardar el usuario", "error")
+            return
+
+        #2. Insertar en la tabla de credenciales
+        credencial_insertada = insertar_credencial(
+            usuario_id=usuario_id,
+            contrasena=password1.value
+        )
+        if not credencial_insertada:
+            crear_dialogo("Error", "Usuario creado, pero no se pudo guardar la credencial", "error")
+            return
+        
+        #3 flujo normal (aquì va el diccionario)
         usuario_data = {
+            'id': usuario_id,
             'username': usuario.value,
             'nombre': nombre.value,
-            'password': password1.value
         }
-        
-        usuario_id = guardar_usuario_local(usuario_data)
-        #usuario_id = guardar_usuario_bd(usuario_data)
-        
-        if usuario_id:
-            usuario_data['id'] = usuario_id
             
-            crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
-            mostrar_verificacion(usuario_data)
-        else:
-            crear_dialogo("Error", "No se pudo guardar el usuario", "error")
+        crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
+        mostrar_verificacion(usuario_data)
+
       
     def mostrar_registro(e):
         page.clean()
