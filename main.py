@@ -8,8 +8,8 @@ from face import SistemaAutenticacionFacial
 from usb import generar_y_guardar_llave, obtener_unidades_usb, registrar_llave_usb
 
 #modulos de la base de datos
-from usuarios import insertar_usuario, obtener_usario_por_usuario
-from credenciales import insertar_credencial, obtener_credencial_por_usuario
+from usuarios import insertar_usuario, obtener_usuario_por_usuario
+from credenciales import insertar_credencial
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -121,30 +121,6 @@ def main(page: ft.Page):
         hilo_cierre.start()
         return dialog
      
-    #def guardar_usuario_bd(usuario_data):
-    #     """Guarda usuario en PostgreSQL"""
-    #     conn = psycopg2.connect(**DB_CONFIG)
-    #     try:
-    #         with conn.cursor() as cur:
-    #             cur.execute("""
-    #                 INSERT INTO usuarios (username, nombre_completo, password_hash, fecha_registro)
-    #                 VALUES (%s, %s, %s, NOW())
-    #                 RETURNING id
-    #             """, (
-    #                 usuario_data['username'],
-    #                 usuario_data['nombre'],
-    #                 usuario_data['password']  # hashearla
-    #             ))
-    #             usuario_id = cur.fetchone()[0]
-    #             conn.commit()
-    #             return usuario_id
-    #     except Exception as e:
-    #         print(f"Error guardando usuario: {e}")
-    #         conn.rollback()
-    #         return None
-    #     finally:
-    #         conn.close()
-    
     def guardar_usuario_local(usuario_data):
         """Versión local sin BD - guarda en diccionario"""
         nonlocal next_user_id
@@ -342,7 +318,7 @@ def main(page: ft.Page):
             
             
         #Verificar que el usuario ya existe en la base de datos
-        if obtener_usario_por_usuario(usuario.value):
+        if obtener_usuario_por_usuario(usuario.value):
             crear_dialogo("Error", "El usuario ya existe", "error")
             return
         

@@ -1,12 +1,12 @@
 import re
-from db import obtener_conexion, liberar_conexion #importar las funciones de la base de datos
+from db import establecer_conexion, devolver_conexion #importar las funciones de la base de datos
 
 def insertar_usuario(nombre: str, nombre_usuario: str):
     """Inserta un nuevo usuario en la base de datos en la tabla usuarios.
     retorna el UUID del usuario o None en caso de error."""
     conn = None #inicializar la conexion a la base de datos
     try:
-        conn = obtener_conexion() #obtener la conexion a la base de datos
+        conn = establecer_conexion() #obtener la conexion a la base de datos
         with conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO usuarios (nombre, nombre_usuario)
@@ -25,13 +25,13 @@ def insertar_usuario(nombre: str, nombre_usuario: str):
         return None
 
     finally:
-        liberar_conexion(conn) #liberar la conexion a la base de datos
+        devolver_conexion(conn) #liberar la conexion a la base de datos
 
-def obtener_usario_por_usuario(nombre_usuario: str):
+def obtener_usuario_por_usuario(nombre_usuario: str):
     """Obtiene un usuario por su nombre de usuario."""
     conn = None
     try:
-        conn = obtener_conexion()
+        conn = establecer_conexion()
         with conn.cursor() as cur:
             cur.execute("""
             SELECT id, nombre, nombre_usuario, fecha_creacion
@@ -45,4 +45,4 @@ def obtener_usario_por_usuario(nombre_usuario: str):
         return None
 
     finally:
-        liberar_conexion(conn) #liberar la conexion a la base de datos
+        devolver_conexion(conn) #liberar la conexion a la base de datos

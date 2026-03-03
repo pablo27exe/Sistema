@@ -1,5 +1,5 @@
 import bcrypt
-from db import obtener_conexion, liberar_conexion
+from db import establecer_conexion, devolver_conexion
 
 def hash_contrasena(contrasena: str) -> str:
     """convierte la contraseña en un hash de bcrypt"""
@@ -10,13 +10,13 @@ def insertar_credencial(usuario_id: str, contrasena: str):
     retorna true si la operacion es exitosa, false en caso contrario."""
     conn = None
     try:
-        hash = hash_contrasena(contrasena)
-        conn = obtener_conexion()
+        hash_generado = hash_contrasena(contrasena)
+        conn = establecer_conexion()
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO credenciales (usuario_id, hash_contrasena)
                 VALUES (%s, %s)
-            """, (usuario_id, hash_contrasena))
+            """, (usuario_id, hash_generado))
         conn.commit() #commit para guardar los cambios en la base de datos
         print(f'Credencial insertada para usuario: {usuario_id}')
         return True
@@ -28,4 +28,4 @@ def insertar_credencial(usuario_id: str, contrasena: str):
         return False
 
     finally:
-        liberar_conexion(conn) #liberar la conexion a la base de datos
+        devolver_conexion (conn) #liberar la conexion a la base de datos
