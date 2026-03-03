@@ -16,7 +16,7 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD"),
 }
-
+ 
 #--Pool de conexiones--
 #minconn: conexiones mínimas que mantienen abiertas aunque no se usen
 #maxconn: limite de conexiones simultaneas permitidas
