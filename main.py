@@ -11,6 +11,8 @@ def main(page: ft.Page):
     page.padding = 50
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
+    page.window_width = 1000
+    page.window_height = 1000
     
     dialogo_actual = None
     usuario_actual = None
