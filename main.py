@@ -1,6 +1,7 @@
 import flet as ft
 import threading
-import time
+import time 
+import re
 
 #importar los modulos de los scripts
 from qro import enviar_qr_por_bluetooth
@@ -120,7 +121,7 @@ def main(page: ft.Page):
         hilo_cierre = threading.Thread(target=cerrar_dialogo_automatico, daemon=True)
         hilo_cierre.start()
         return dialog
-     
+    
     def guardar_usuario_local(usuario_data):
         """Versión local sin BD - guarda en diccionario"""
         nonlocal next_user_id
@@ -309,20 +310,37 @@ def main(page: ft.Page):
     
     # ===== PÁGINA 2: REGISTRO =====
     def registro_exitoso(e):
+        # Campos obligatorios
+        if not all([usuario.value, nombre.value, password1.value]):
+            crear_dialogo("Error", "Todos los campos son obligatorios", "error")
+            return
+        
+        
+        #Validar formato: Expresiones regulares para limitar los datos a ingresar
+        patron_nombre = patron_nombre = r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]*(?:[\s\-'][A-ZÁÉÍÓÚÑ][a-záéíóúñ]*)*$" #Solo letras a-z, A-Z, guiones, espacios y acentos 
+        patron_contrasena = r'^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};:\'",.<>/?]).{8,}$' #Contraseña
+        
+        if not re.match(patron_nombre, nombre.value.strip()):
+            crear_dialogo("Error", "El nombre debe iniciar con mayúscula en cada palabra.","error")
+            return
+        
+            
+        if not re.match(patron_contrasena, password1.value.strip()):
+            crear_dialogo("Error", "La contraseña debe tener mínimo 8 caracteres, una mayúscula, un número y un carácter especial.","error")
+            return
+        
+        # Coincidencia de contraseñas
         if password1.value != password2.value:
             crear_dialogo("Error", "Las contraseñas no coinciden", "error")
             return
-        
-        if not all([usuario.value, nombre.value, password1.value]):
-            crear_dialogo("Error", "Todos los campos son obligatorios", "error")
-            
-            
+
         #Verificar que el usuario ya existe en la base de datos
         if obtener_usuario_por_usuario(usuario.value):
             crear_dialogo("Error", "El usuario ya existe", "error")
             return
         
-        #1. Insertar en la tabla de usuarios (antes, se guardaba en un diccionario con datos del usuario)
+
+        # Insertar en la tabla de usuarios (antes, se guardaba en un diccionario con datos del usuario)
         usuario_id = insertar_usuario(
             nombre=nombre.value,
             nombre_usuario=usuario.value
@@ -332,7 +350,7 @@ def main(page: ft.Page):
             crear_dialogo("Error", "No se pudo guardar el usuario", "error")
             return
 
-        #2. Insertar en la tabla de credenciales
+        # Insertar en la tabla de credenciales
         credencial_insertada = insertar_credencial(
             usuario_id=usuario_id,
             contrasena=password1.value
@@ -341,7 +359,7 @@ def main(page: ft.Page):
             crear_dialogo("Error", "Usuario creado, pero no se pudo guardar la credencial", "error")
             return
         
-        #3 flujo normal (aquì va el diccionario)
+        #flujo normal (aquì va el diccionario)
         usuario_data = {
             'id': usuario_id,
             'username': usuario.value,
@@ -357,6 +375,7 @@ def main(page: ft.Page):
         
         global usuario, nombre, password1, password2
         usuario = ft.TextField(label="Usuario", width=300)
+        
         nombre = ft.TextField(label="Nombre completo", width=300)
         password1 = ft.TextField(label="Contraseña", password=True, width=300,can_reveal_password=True,)
         password2 = ft.TextField(label="Confirmar contraseña", password=True, width=300,can_reveal_password=True,)

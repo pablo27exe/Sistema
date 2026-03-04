@@ -28,4 +28,5 @@ def insertar_credencial(usuario_id: str, contrasena: str):
         return False
 
     finally:
-        devolver_conexion (conn) #liberar la conexion a la base de datos
+        devolver_conexion (conn) #liberar la conexion a la base de datos 
+        
