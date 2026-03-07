@@ -2,4 +2,5 @@
 .env
 *.key
 *.pub
+facial_data/
 __pycache__/

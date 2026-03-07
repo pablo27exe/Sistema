@@ -6,11 +6,13 @@ import re
 #importar los modulos de los scripts
 from qro import enviar_qr_por_bluetooth
 from face import SistemaAutenticacionFacial
-from usb import generar_y_guardar_llave, obtener_unidades_usb, registrar_llave_usb
+from usb import registrar_llave_usb
+from inicio import mostrar_bienvenida
 
 #modulos de la base de datos
 from usuarios import insertar_usuario, obtener_usuario_por_usuario
 from credenciales import insertar_credencial
+from segundo_metodo import insertar_metodo, obtener_metodo_por_usuario
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -22,15 +24,7 @@ def main(page: ft.Page):
     
     dialogo_actual = None
     usuario_actual = None
-    
-    """Configuración de BD
-    DB_CONFIG = {
-        'host': 'localhost',
-        'data_base': 'bd',
-        'user': 'usuario',
-        'password': 'contraseña'
-        }"""
-        
+            
     #variable global para simular usuarios
     next_user_id = 1
     usuarios_registrados = {}
@@ -197,113 +191,149 @@ def main(page: ft.Page):
         )
     
     # ===== FUNCIONES DE VERIFICACIÓN =====
-    #en versiones futuras permitirá el poder implementar scripts para cada uno de los procesos, por ahora solo muestra un mensaje para indicar que todo va bien
-    def qr_clicked(e):
-        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info") 
-        hilo = threading.Thread(target=proceso_segundo_plano, daemon=True)
-        hilo.start()
-        
-    
-    def llave_clicked(e):
-        nonlocal usuario_actual
-        if usuario_actual is None:
-            crear_dialogo("Error", "No hay usuario seleccionado", "error")
-            return
-
-        datos_usuario = usuario_actual.copy()
-        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info", duracion=2)
-
-        def on_usb_encontrado(usb_path, confirmar_y_generar):
-            def mostrar_confirmacion():
-                crear_dialogo_con_imagen(
-                    "USB.ico",
-                    "USB detectado",
-                    f"Se generará la llave en: {usb_path}\nPresiona Iniciar para continuar.",
-                    "info",
-                    on_iniciar=confirmar_y_generar
-                )
-            page.run_thread(mostrar_confirmacion)
-
-        def on_success(mensaje):
-            page.run_thread(lambda: crear_dialogo("Llave generada", mensaje, "exito"))
-
-        def on_error(mensaje):
-            page.run_thread(lambda: crear_dialogo("Error", mensaje, "error"))
-
-        def ejecutar():
-            time.sleep(2.2)
-            registrar_llave_usb(datos_usuario['username'], on_success, on_error, on_usb_encontrado)
-
-        threading.Thread(target=ejecutar, daemon=True).start()
-
-    # ─── Función para el evento de facial_clicked  (crear_dialogo_con_imagen) ──
-
-    def facial_clicked(e):
-        nonlocal usuario_actual
-        if usuario_actual is None:
-            crear_dialogo("Error", "No hay usuario seleccionado", "error")
-            return
-
-        datos_usuario = usuario_actual.copy()
-        crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info", duracion=2)
-
-        def mostrar_segundo_dialogo():
-            time.sleep(2.2)
-
-            def on_iniciar_facial():
-                sistema_facial = SistemaAutenticacionFacial()
-                def proceso_captura():
-                    try:
-                        success, mensaje = sistema_facial.capturar_rostro_auto(
-                            usuario_id=datos_usuario['id'],
-                            nombre_usuario=datos_usuario['username']
-                        )
-                        if success:
-                            print("Captura exitosa")
-                        else:
-                            print(f"Error: {mensaje}")
-                    except Exception as ex:
-                        print(f"Error: {ex}")
-
-                threading.Thread(target=proceso_captura, daemon=True).start()
-
-            page.run_thread(lambda: crear_dialogo_con_imagen(
-                "FACE.ico",
-                "Instrucciones",
-                "• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado\n• La captura será automática",
-                "info",
-                on_iniciar=on_iniciar_facial
-            ))
-
-        threading.Thread(target=mostrar_segundo_dialogo, daemon=True).start()
-        
+            
     # ===== PÁGINA 3: VERIFICACIÓN =====
     def mostrar_verificacion(usuario_data):
         nonlocal usuario_actual
         usuario_actual = usuario_data
-        print(f"Usuario actual establecido: {usuario_actual}")  # Debug
+        print(f"Usuario actual establecido: {usuario_actual}")
         page.clean()
-        
-        botones = [
-            crear_boton_verificacion("Obtener QR", "QR.ico", "white", qr_clicked),
+
+        # Estado compartido
+        metodo_elegido = {"valor": False}
+
+        def deshabilitar_botones():
+            btn_qr.disabled     = True
+            btn_usb.disabled    = True
+            btn_facial.disabled = True
+            page.update()
+
+        def metodo_completado(tipo: str, dato_factor: str = None):
+            if metodo_elegido["valor"]:
+                return
+
+            metodo_elegido["valor"] = True
+            deshabilitar_botones()
+
+            bien = insertar_metodo(
+                usuario_id  = usuario_data['id'],
+                tipo        = tipo,
+                dato_factor = dato_factor
+            )
+
+            if bien:
+                page.run_thread(lambda: mostrar_bienvenida(page, usuario_data))
+            else:
+                metodo_elegido["valor"] = False
+                page.run_thread(lambda: crear_dialogo(
+                    "Error",
+                    "No se pudo guardar el método. Intenta de nuevo.",
+                    "error"
+                ))
+
+        def qr_clicked(e):
+            if metodo_elegido["valor"]:
+                return
+            crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info")
+
+            def proceso():
+                try:
+                    dato_qr = enviar_qr_por_bluetooth()
+                    metodo_completado(tipo="QR", dato_factor=dato_qr)
+                except Exception as ex:
+                    page.run_thread(lambda: crear_dialogo("Error", str(ex), "error"))
+
+            threading.Thread(target=proceso, daemon=True).start()
             
-            crear_boton_verificacion("Obtener llave", "USB.ico", "white", llave_clicked),
+
+        def llave_clicked(e):
+            if metodo_elegido["valor"]:
+                return
+
+            datos_usuario = usuario_actual.copy()
+            crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de verificación por llave...", "info", duracion=2)
+
+            def on_usb_encontrado(usb_path, confirmar_y_generar):
+                def mostrar_confirmacion():
+                    crear_dialogo_con_imagen(
+                        "USB.ico",
+                        "USB detectado",
+                        f"Se generará la llave en: {usb_path}\nPresiona Iniciar para continuar.",
+                        "info",
+                        on_iniciar=confirmar_y_generar
+                    )
+                page.run_thread(mostrar_confirmacion)
+
+            def on_success(clave_publica: str):
+                metodo_completado(tipo="USB", dato_factor=clave_publica)
+
+            def on_error(mensaje):
+                page.run_thread(lambda: crear_dialogo("Error", mensaje, "error"))
+
+            def ejecutar():
+                time.sleep(2.2)
+                registrar_llave_usb(datos_usuario['username'], on_success, on_error, on_usb_encontrado)
+
+            threading.Thread(target=ejecutar, daemon=True).start()
             
-            crear_boton_verificacion("Reconocimiento facial", "FACE.ico", "white", facial_clicked),
-        ]
-        
+
+        def facial_clicked(e):
+            if metodo_elegido["valor"]:
+                return
+
+            datos_usuario = usuario_actual.copy()
+            crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de reconocimiento facial...", "info", duracion=2)
+
+            def mostrar_segundo_dialogo():
+                time.sleep(2.2)
+
+                def on_iniciar_facial():
+                    sistema_facial = SistemaAutenticacionFacial()
+
+                    def proceso_captura():
+                        try:
+                            success, dato_facial = sistema_facial.capturar_rostro_auto(
+                                usuario_id     = datos_usuario['id'],
+                                nombre_usuario = datos_usuario['username']
+                            )
+                            if success:
+                                metodo_completado(tipo="FACIAL", dato_factor=dato_facial)
+                            else:
+                                page.run_thread(lambda: crear_dialogo("Error", dato_facial, "error"))
+                        except Exception as ex:
+                            page.run_thread(lambda: crear_dialogo("Error", str(ex), "error"))
+
+                    threading.Thread(target=proceso_captura, daemon=True).start()
+
+                page.run_thread(lambda: crear_dialogo_con_imagen(
+                    "FACE.ico",
+                    "Instrucciones",
+                    "• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado\n• La captura será automática",
+                    "info",
+                    on_iniciar=on_iniciar_facial
+                ))
+
+            threading.Thread(target=mostrar_segundo_dialogo, daemon=True).start()
+
+        # ── Botones ─────────────────────────────────────────────────────────────
+        btn_qr     = crear_boton_verificacion("Obtener QR",            "QR.ico",   "white", qr_clicked)
+        btn_usb    = crear_boton_verificacion("Obtener llave",         "USB.ico",  "white", llave_clicked)
+        btn_facial = crear_boton_verificacion("Reconocimiento facial", "FACE.ico", "white", facial_clicked)
+
         elementos = [
             ft.Text("SEGUNDO MÉTODO DE VERIFICACIÓN", size=24, weight="bold", text_align="center"),
             ft.Text("Elige una opción de verificación:", size=16),
             ft.Container(height=20),
-            *botones,
+            btn_qr,
+            btn_usb,
+            btn_facial,
             ft.Container(height=20),
             ft.TextButton(
                 content=ft.Text("Volver al inicio"),
                 on_click=lambda _: mostrar_login(),
             ),
         ]
-        
+
         verificacion_container = crear_container_formulario("", elementos)
         page.add(verificacion_container)
         page.update()

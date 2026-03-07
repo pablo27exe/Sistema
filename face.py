@@ -3,8 +3,6 @@ import numpy as np
 import os
 import pickle
 import time
-import hashlib
-import getpass
 from datetime import datetime
 
 # import psycopg2
@@ -26,6 +24,15 @@ def superponer_imagen(frame, imagen_rgba, x, y, w, h):
 class SistemaAutenticacionFacial:
     def __init__(self):
         """Constructor de la clase"""
+        # ── Carpeta dedicada para datos faciales ──────────────────────
+        self.data_dir = "facial_data"
+        os.makedirs(self.data_dir, exist_ok=True)  # La crea si no existe
+
+        # Rutas centralizadas
+        self.ruta_modelo   = os.path.join(self.data_dir, "modelo_facial_auth.yml")
+        self.ruta_ids      = os.path.join(self.data_dir, "ids_faciales.pkl")
+        self.ruta_usuarios = os.path.join(self.data_dir, "usuarios_auth.pkl")
+        
         self.usuarios = {}  # Este diccionario ahora solo se usa para el modelo facial interno
         self.ids_a_usuarios = {}
         self.detector_rostros = cv2.CascadeClassifier(
@@ -37,10 +44,9 @@ class SistemaAutenticacionFacial:
         # self.cargar_model_facial()
     
     def cargar_usuarios(self):
-        """Carga los usuarios desde el archivo (para compatibilidad)"""
         try:
-            if os.path.exists("usuarios_auth.pkl"):
-                with open("usuarios_auth.pkl", "rb") as f:
+            if os.path.exists(self.ruta_usuarios):
+                with open(self.ruta_usuarios, "rb") as f:
                     self.usuarios = pickle.load(f)
             else:
                 self.usuarios = {}
@@ -49,9 +55,8 @@ class SistemaAutenticacionFacial:
             self.usuarios = {}
     
     def guardar_usuarios(self):
-        """Guarda los usuarios en archivo (para compatibilidad)"""
         try:
-            with open("usuarios_auth.pkl", "wb") as f:
+            with open(self.ruta_usuarios, "wb") as f:
                 pickle.dump(self.usuarios, f)
         except Exception as e:
             print(f"Error guardando usuarios: {e}")
@@ -59,20 +64,20 @@ class SistemaAutenticacionFacial:
     def cargar_model_facial(self):
         """Carga el modelo de reconocimiento facial completo"""
         try:
-            if os.path.exists("modelo_facial_auth.yml"):
-                self.reconocedor.read("modelo_facial_auth.yml")
+            if os.path.exists(self.ruta_modelo):
+                self.reconocedor.read(self.ruta_modelo)
                 print("Modelo facial cargado")
             else:
                 print("No hay modelo facial previo")
-            
-            if os.path.exists("ids_faciales.pkl"):
-                with open("ids_faciales.pkl", "rb") as f:
+
+            if os.path.exists(self.ruta_ids):
+                with open(self.ruta_ids, "rb") as f:
                     self.ids_a_usuarios = pickle.load(f)
                 print(f"{len(self.ids_a_usuarios)} IDs faciales cargados")
             else:
                 print("No hay IDs faciales registrados")
                 self.ids_a_usuarios = {}
-                
+
         except Exception as e:
             print(f"No se pudo cargar modelo facial: {e}")
             self.ids_a_usuarios = {}
@@ -96,13 +101,13 @@ class SistemaAutenticacionFacial:
     def guardar_modelo_facial(self):
         """Guarda el modelo facial completo"""
         try:
-            self.reconocedor.save("modelo_facial_auth.yml")
-            with open("ids_faciales.pkl", "wb") as f:
+            self.reconocedor.save(self.ruta_modelo)
+            with open(self.ruta_ids, "wb") as f:
                 pickle.dump(self.ids_a_usuarios, f)
-            print("✓ Modelo facial guardado")
+            print("Modelo facial guardado")
             return True
         except Exception as e:
-            print(f"✗ Error guardando modelo facial: {e}")
+            print(f"Error guardando modelo facial: {e}")
             return False
     
     def guardar_modelo_usuario(self, usuario_id, nombre_usuario):
@@ -140,6 +145,7 @@ class SistemaAutenticacionFacial:
             if not ret:
                 break
             
+            frame = cv2.flip(frame, 1)
             gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             rostros_detectados = self.detector_rostros.detectMultiScale(
@@ -192,43 +198,40 @@ class SistemaAutenticacionFacial:
             return False, f"No hay suficientes capturas ({len(rostros)}/20)"
     
     def entrenar_modelo_usuario(self, rostros, usuario_id, nombre_usuario):
-        """
-        Entrena el modelo con los rostros capturados para un usuario específico
-        """
         try:
-            # Usar el ID proporcionado desde Flet en lugar de generar uno nuevo
-            self.ids_a_usuarios[usuario_id] = nombre_usuario
-            
-            # Preparar datos
+            if usuario_id not in [v["uuid"] for v in self.ids_a_usuarios.values()]:
+                label_int = len(self.ids_a_usuarios)
+                self.ids_a_usuarios[label_int] = {
+                    "uuid": usuario_id,
+                    "nombre": nombre_usuario
+                }
+            else:
+                label_int = next(
+                    k for k, v in self.ids_a_usuarios.items()
+                    if v["uuid"] == usuario_id
+                )
+
             rostros_arreglo = np.array(rostros, dtype=np.uint8)
-            ids_arreglo = np.full(len(rostros), usuario_id, dtype=np.int32)
-            
-            print(f"\nENTRENANDO MODELO...")
-            print(f"  Rostros: {len(rostros_arreglo)}")
-            print(f"  ID asignado: {usuario_id}")
-            
-            # Verificar si existe modelo previo
-            if os.path.exists("modelo_facial_auth.yml"):
+            ids_arreglo     = np.full(len(rostros), label_int, dtype=np.int32)
+
+            if os.path.exists(self.ruta_modelo):  # ← ruta centralizada
                 print("Actualizando modelo existente")
-                # Para update, necesitamos cargar el modelo primero
-                self.reconocedor.read("modelo_facial_auth.yml")
+                self.reconocedor.read(self.ruta_modelo)
                 self.reconocedor.update(rostros_arreglo, ids_arreglo)
             else:
                 print("Creando nuevo modelo")
                 self.reconocedor.train(rostros_arreglo, ids_arreglo)
-            
-            # Guardar modelo actualizado
+
             if self.guardar_modelo_facial():
                 return True, f"Modelo entrenado exitosamente para {nombre_usuario}"
             else:
                 return False, "Error guardando el modelo facial"
-            
+
         except Exception as e:
-            print(f"Error entrenando modelo: {e}")
             import traceback
             traceback.print_exc()
-            return False, f"Error durante el entrenamiento: {str(e)}"
-    
+            return False, f"Error: {str(e)}"
+        
     def verificar_rostro_auto(self, usuario_id, nombre_usuario, tiempo_espera=30):
         """
         Versión automática de verificación facial
@@ -283,22 +286,21 @@ class SistemaAutenticacionFacial:
                 
                 # Predecir
                 id_predicho, confianza = self.reconocedor.predict(rostro_redim)
-                
-                # Guardar mejor confianza
-                if confianza < mejor_confianza:
-                    mejor_confianza = confianza
-                
-                # Mostrar información
-                nombre_predicho = self.ids_a_usuarios.get(id_predicho, "Desconocido")
+
+                # Buscar el label entero correspondiente al UUID
+                label_usuario = next(
+                    (k for k, v in self.ids_a_usuarios.items() if v["uuid"] == usuario_id),
+                    None
+                )
+
+                nombre_predicho = self.ids_a_usuarios.get(id_predicho, {}).get("nombre", "Desconocido")
                 texto = f"{nombre_predicho} ({100 - confianza:.1f}%)"
-                cv2.putText(frame_mostrar, texto, (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                
-                # Verificar si coincide
-                if id_predicho == usuario_id and confianza < 80:
+                cv2.putText(frame_mostrar, texto, (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+                # Comparar label entero, no UUID
+                if id_predicho == label_usuario and confianza < 80:
                     verificado = True
-                    cv2.putText(frame_mostrar, "✓ VERIFICADO", (10, 60), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
             # Mostrar tiempo restante
             tiempo_restante = int(tiempo_espera - (time.time() - tiempo_inicio))
@@ -325,24 +327,6 @@ class SistemaAutenticacionFacial:
             else:
                 return False, mejor_confianza, "No se detectó ningún rostro"
     
-    # Métodos originales comentados para no usarlos
-    """
-    def registro_de_usuario(self):
-        # Versión original con input
-        pass
-    
-    def capturar_rostro(self, username):
-        # Versión original
-        pass
-    
-    def reconocer_usuario(self, username):
-        # Versión original
-        pass
-    
-    def inicializar(self):
-        # Versión original
-        pass
-    """
 
 def verificar_instalacion():
     """Verificar que todo esté instalado CV2 y numpy"""
