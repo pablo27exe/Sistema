@@ -39,7 +39,7 @@ def obtener_metodo_por_usuario(usuario_id: str):
         conn = establecer_conexion()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id; tipo, activo, registrado_en
+                SELECT tipo, dato_factor
                 FROM metodos_segundo_factor
                 WHERE usuario_id = %s AND activo = TRUE
             """, (usuario_id,))

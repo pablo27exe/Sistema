@@ -1,18 +1,23 @@
+import encodings
 import flet as ft
 import threading
 import time 
 import re
+import os
 
 #importar los modulos de los scripts
 from qro import enviar_qr_por_bluetooth
 from face import SistemaAutenticacionFacial
-from usb import registrar_llave_usb
+from usb import registrar_llave_usb, obtener_unidades_usb
 from inicio import mostrar_bienvenida
 
 #modulos de la base de datos
 from usuarios import insertar_usuario, obtener_usuario_por_usuario
-from credenciales import insertar_credencial
+from credenciales import insertar_credencial, verificar_contrasena
 from segundo_metodo import insertar_metodo, obtener_metodo_por_usuario
+
+#auntenticacion
+from autenticacion import iniciar_segundo_factor
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -115,44 +120,7 @@ def main(page: ft.Page):
         hilo_cierre = threading.Thread(target=cerrar_dialogo_automatico, daemon=True)
         hilo_cierre.start()
         return dialog
-    
-    def guardar_usuario_local(usuario_data):
-        """Versión local sin BD - guarda en diccionario"""
-        nonlocal next_user_id
-        
-        usuario_id = next_user_id
-        next_user_id += 1
-        
-        usuarios_registrados[usuario_id] = {
-            'username': usuario_data['username'],
-            'nombre': usuario_data['nombre'],
-            'password': usuario_data['password'], 
-            #'fecha_registro': None  usar datetime.now()
-        }
-        
-        print(f"Usuario guardado localmente: ID {usuario_id} - {usuario_data['username']}")
-        return usuario_id
-    
-    def proceso_segundo_plano():
-        try: 
-            enviar_qr_por_bluetooth()
-            
-            def actualizar_interfaz():
-                nonlocal dialogo_actual
-                if dialogo_actual: 
-                    cerrar_dialogo(dialogo_actual) 
-                    dialogo_actual = None
-                page.update()
-            page.run_thread(actualizar_interfaz)
-            
-        except Exception as e:
-            def error_interfaz():
-                cerrar_dialogo()
-                print(f"Error inesperado: {str(e)}")
-                page.update()
-            
-            page.run_thread(error_interfaz)  
-                 
+               
     def crear_boton_verificacion(texto, icono, color_fondo, on_click):
         """Crea un botón estandarizado para verificación"""
         return ft.ElevatedButton(
@@ -433,10 +401,49 @@ def main(page: ft.Page):
     
     # ===== PÁGINA 1: LOGIN =====
     def acceso(e):
+        #Validar que el campo no esté vacío
         if not usuario.value:
             crear_dialogo("Error", "Favor de ingresar un usuario", "error")
             return
+        
+        #Verificar que el usuario esté en la base de datos
+        datos_usuario = obtener_usuario_por_usuario(usuario.value.strip())
+        if not datos_usuario:
+            crear_dialogo("Error", f"El usuario '{usuario.value}' no está registrado.","error")
+            return
+        
     
+        usuario_id = str(datos_usuario[0])
+        nombre_display = datos_usuario[1]
+        nombre_usuario = datos_usuario[2]
+        
+        usuario_datos = {
+            'id': usuario_id,
+            'username': nombre_usuario,
+            'nombre': nombre_display
+        }
+        
+        #Detectar el método con el que se registró
+        metodo = obtener_metodo_por_usuario(usuario_id)
+        print(f"Metodo retornado: {metodo}")
+        if not metodo:
+            crear_dialogo("Error", "Este usuario no tiene un método de verificación registrado.","error")
+            return
+        
+        tipo_metodo, dato_factor = metodo
+        iniciar_segundo_factor(
+            page          = page,
+            datos_usuario = usuario_datos,
+            tipo          = tipo_metodo,
+            dato_factor   = dato_factor,
+            crear_dialogo            = crear_dialogo,
+            crear_dialogo_con_imagen = crear_dialogo_con_imagen,
+            crear_dialogo_automatico = crear_dialogo_automatico,
+            cerrar_dialogo           = cerrar_dialogo,
+            mostrar_bienvenida       = mostrar_bienvenida,
+            mostrar_login            = mostrar_login
+        )
+              
     def mostrar_login():
         page.clean()
         

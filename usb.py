@@ -46,7 +46,7 @@ def generar_y_guardar_llave(usb_path: str):
     with open(ruta_privada, "wb") as f:
         f.write(bytes_privados)
         
-    return bytes_publicos.decode #Devuelve la pública para almacenarla en la DB
+    return bytes_publicos.decode() #Devuelve la pública para almacenarla en la DB
 
 #Registro de llave
 
@@ -69,7 +69,7 @@ def registrar_llave_usb(username: str, on_success, on_error, on_usb_encontrado):
                 USERS_DB[username]["public_key"] = clave_publica
                 USERS_DB[username]["tiene_usb"] = True
                 
-                on_success(f"Llave guardada en: {usb_path}")
+                on_success(clave_publica)
                 
                 webbrowser.open(usb_path)
                 

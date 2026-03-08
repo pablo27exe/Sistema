@@ -1,11 +1,14 @@
 import flet as ft
 #import sys
 
-def mostrar_bienvenida(page: ft.Page, usuario_data: dict):
+def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion = None):
     page.clean()
     
     def cerrar_sesion(_):
-        page.window.destroy()
+        if on_cerrar_sesion(_):
+            on_cerrar_sesion()
+        else:
+            page.window.destroy()
     
     elementos = [
         ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN, size=80),
