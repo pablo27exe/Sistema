@@ -1,4 +1,5 @@
 import bcrypt
+from psycopg2.extensions import cursor
 from db import establecer_conexion, devolver_conexion
 
 def hash_contrasena(contrasena: str) -> str:
@@ -29,4 +30,31 @@ def insertar_credencial(usuario_id: str, contrasena: str):
 
     finally:
         devolver_conexion (conn) #liberar la conexion a la base de datos 
+        
+def verificar_contrasena(usuario_id: str, contrasena: str) -> bool:
+    """
+    Compara la contraseña ingresada con el hash que se guardó en la base de datos
+    """
+    conn = None
+    try:
+        conn = establecer_conexion()
+        with conn.cursor() as cur:
+            cur.execute("""
+                        SELECT hash_contrasena
+                        FROM credenciales
+                        WHERE usuario_id = %s
+                        """, (usuario_id,))
+            resultado = cur.fetchone()
+
+        if not resultado:
+            return False
+        
+        hash_guardado = resultado[0]
+        return bcrypt.checkpw(contrasena.encode(), hash_guardado.encode())
+    
+    except Exception as e:
+        print(f'Error verificando la contraseña: {e}')
+        return False
+    finally:
+        devolver_conexion(conn)
         
