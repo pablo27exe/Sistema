@@ -205,11 +205,11 @@ def main(page: ft.Page):
             crear_dialogo_automatico("Proceso iniciado", "Iniciando proceso de escaneo QR...", "info")
 
             def proceso():
-                try:
-                    dato_qr = enviar_qr_por_bluetooth()
-                    metodo_completado(tipo="QR", dato_factor=dato_qr)
-                except Exception as ex:
-                    page.run_thread(lambda: crear_dialogo("Error", str(ex), "error"))
+                exito, mensaje, contrasena_qr = enviar_qr_por_bluetooth()
+                if exito and contrasena_qr:
+                    metodo_completado(tipo="QR", dato_factor=contrasena_qr)
+                else: 
+                    page.run_thread(lambda: crear_dialogo("Error", mensaje, "error"))
 
             threading.Thread(target=proceso, daemon=True).start()
             
