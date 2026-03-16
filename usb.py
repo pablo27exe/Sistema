@@ -1,6 +1,7 @@
 import os
+import subprocess
 import webbrowser
-import bcrypt
+import sys
 from pathlib import Path
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -45,6 +46,19 @@ def generar_y_guardar_llave(usb_path: str):
     ruta_privada = os.path.join(usb_path, KEY_FILENAME)
     with open(ruta_privada, "wb") as f:
         f.write(bytes_privados)
+        
+    #Ocultar archivo
+    try:
+        if sys.platform == 'win32':
+            #Atributo de oculto en windows
+            subprocess.run(
+                ["attrib","+H","+S",ruta_privada],
+                check=True,
+                capture_output=True
+            )
+            print(f'Archivo ocultado:{ruta_privada}')
+    except Exception as e:
+        print(f'No se pudo ocultar el archivo: {e}')
         
     return bytes_publicos.decode() #Devuelve la pública para almacenarla en la DB
 
