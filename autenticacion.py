@@ -1,9 +1,11 @@
 import os
 import threading
 import time
+import flet as ft
 from cryptography.hazmat.primitives import serialization
 from usb import obtener_unidades_usb
 from credenciales import verificar_contrasena
+from leer_qr import leer_qr_camara
 
 
 def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: str,
@@ -28,7 +30,7 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
                 "Método no disponible", motivo, "error"
             ))
 
-        campo_password = __import__('flet').TextField(
+        campo_password = ft.TextField(
             label="Contraseña",
             password=True,
             can_reveal_password=True,
@@ -57,7 +59,6 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
                     )
                     page.update()
 
-        import flet as ft
         dialog_password = ft.AlertDialog(
             title=ft.Text("Ingresa tu contraseña", color=ft.Colors.BLUE),
             content=ft.Column([
@@ -99,9 +100,12 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
 
             ruta = None
             for unidad in unidades:
-                candidato = os.path.join(unidad, "llave.key")
-                if os.path.exists(candidato):
-                    ruta = candidato
+                for nombre in ['llave.key', '.llave.key']:
+                    candidato = os.path.join(unidad, nombre)
+                    if os.path.exists(candidato):
+                        ruta = candidato
+                        break
+                if ruta:
                     break
 
             if not ruta:
@@ -144,6 +148,40 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
                 ))
 
         threading.Thread(target=verificar_usb, daemon=True).start()
+    
+    #QR    
+    elif tipo == 'QR':
+        crear_dialogo_automatico(
+            'Verificación QR',
+            'Abriendo cámara para leer tu código QR...',
+            'info',
+            duracion=2
+        )
+        
+        def proceso_qr():
+            time.sleep(2.2)
+            try:
+                exito, dato_leido = leer_qr_camara(tiempo_espera=25)
+                 
+                if not exito:
+                     page.run_thread(lambda: fallback(
+                         f'No se puede leer el QR: {dato_leido}'
+                     ))
+                     return
+                 
+                if dato_leido.strip()  == dato_factor.strip():
+                     page.run_thread(autenticacion_exitosa)
+                else:
+                    page.run_thread(lambda: fallback(
+                        'El código QR no coincide con el registrado'
+                    ))
+                    
+            except Exception as e:
+                page.run_thread(lambda: fallback(
+                    f'Error leyendo QR: {str(e)}'
+                ))
+                
+        threading.Thread(target=proceso_qr, daemon=True).start()
 
     else:
         fallback(f"Método '{tipo}' no reconocido.")
