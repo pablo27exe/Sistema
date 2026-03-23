@@ -29,16 +29,16 @@ def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion = Non
             text_align=ft.TextAlign.CENTER
         ),
         ft.Container(height=20),
-        #ft.ElevatedButton(
-        #    content=ft.Text("Cerrar sesión"),
-        #    icon=ft.Icons.LOGOUT,
-        #    width=250,
-        #    on_click=cerrar_sesion,
-        #    style=ft.ButtonStyle(
-        #        color=ft.Colors.WHITE,
-        #        bgcolor=ft.Colors.RED_400
-        #    )
-        #)
+        ft.ElevatedButton(
+            content=ft.Text("Cerrar sesión"),
+            icon=ft.Icons.LOGOUT,
+            width=250,
+            on_click=cerrar_sesion,
+            style=ft.ButtonStyle(
+                color=ft.Colors.WHITE,
+                bgcolor=ft.Colors.RED_400
+            )
+        )
     ]
     
     bienvenida_container = ft.Container(

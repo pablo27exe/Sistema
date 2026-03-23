@@ -21,7 +21,7 @@ from autenticacion import iniciar_segundo_factor
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
-    page.padding = 50
+    page.padding = 0
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
     page.window_width = 1000
@@ -34,7 +34,37 @@ def main(page: ft.Page):
     next_user_id = 1
     usuarios_registrados = {}
     
+    
     # ===== FUNCIONES AUXILIARES =====
+    def mostrar_pantalla(contenido):
+        page.clean()
+        page.add(
+            ft.Stack(
+                controls=[
+                    # Capa 1: fondo degradado ocupa todo
+                    ft.Container(
+                        expand=True,
+                        gradient=ft.LinearGradient(
+                            begin=ft.Alignment(0, -1),
+                            end=ft.Alignment(0, 1),
+                            colors=["#1a1a2e", "#16213e", "#0f3460"]
+                        )
+                    ),
+                    # Capa 2: cuadro centrado con tamaño fijo
+                    ft.Container(
+                        content=contenido,
+                        width=460,
+                        height=560,
+                        top=100,
+                        left=400,
+                    )
+                ],
+                expand=True
+            )
+        )
+        page.update()
+
+
     def cerrar_dialogo(dialog): #permite que al dar clic en el botón de aceptar de cada cuadro de dialogo se pueda cerrar
         if dialog:  # Verificar que exista
             dialog.open = False
@@ -164,8 +194,7 @@ def main(page: ft.Page):
     def mostrar_verificacion(usuario_data):
         nonlocal usuario_actual
         usuario_actual = usuario_data
-        print(f"Usuario actual establecido: {usuario_actual}")
-        page.clean()
+        #print(f"Usuario actual establecido: {usuario_actual}")
 
         # Estado compartido
         metodo_elegido = {"valor": False}
@@ -303,8 +332,7 @@ def main(page: ft.Page):
         ]
 
         verificacion_container = crear_container_formulario("", elementos)
-        page.add(verificacion_container)
-        page.update()
+        mostrar_pantalla(verificacion_container) 
     
     # ===== PÁGINA 2: REGISTRO =====
     def registro_exitoso(e):
@@ -368,9 +396,7 @@ def main(page: ft.Page):
         mostrar_verificacion(usuario_data)
 
       
-    def mostrar_registro(e):
-        page.clean()
-        
+    def mostrar_registro(e):       
         global usuario, nombre, password1, password2
         usuario = ft.TextField(label="Usuario", width=300)
         
@@ -383,11 +409,28 @@ def main(page: ft.Page):
             nombre,
             password1,
             password2,
-            ft.ElevatedButton(
-                content=ft.Text("Finalizar registro"),
+                ft.ElevatedButton(
+                content=ft.Text("Ingresar"),
                 width=300,
-                bgcolor="green",
                 on_click=registro_exitoso,
+                style=ft.ButtonStyle(
+                    color={
+                        ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                        ft.ControlState.HOVERED: ft.Colors.BLACK,
+                    },
+                    bgcolor={
+                        ft.ControlState.DEFAULT: ft.Colors.BLACK,
+                        ft.ControlState.HOVERED: ft.Colors.WHITE,
+                    },
+                    side={
+                        ft.ControlState.HOVERED: ft.BorderSide(1, ft.Colors.BLACK),
+                    },
+                    elevation={
+                        ft.ControlState.DEFAULT: 2,
+                        ft.ControlState.HOVERED: 8,
+                    },
+                    animation_duration=200
+                )
             ),
             ft.TextButton(
                 content=ft.Text("Volver al inicio"),
@@ -396,8 +439,7 @@ def main(page: ft.Page):
         ]
         
         registro_container = crear_container_formulario("REGISTRO DE USUARIO", elementos)
-        page.add(registro_container)
-        page.update()
+        mostrar_pantalla(registro_container) 
     
     # ===== PÁGINA 1: LOGIN =====
     def acceso(e):
@@ -425,7 +467,7 @@ def main(page: ft.Page):
         
         #Detectar el método con el que se registró
         metodo = obtener_metodo_por_usuario(usuario_id)
-        print(f"Metodo retornado: {metodo}")
+        #print(f"Metodo retornado: {metodo}")
         if not metodo:
             crear_dialogo("Error", "Este usuario no tiene un método de verificación registrado.","error")
             return
@@ -445,18 +487,34 @@ def main(page: ft.Page):
         )
               
     def mostrar_login():
-        page.clean()
-        
+
         global usuario
         usuario = ft.TextField(label="Usuario", width=300)
         
         elementos = [
             usuario,
-            ft.ElevatedButton(
+                ft.ElevatedButton(
                 content=ft.Text("Ingresar"),
                 width=300,
-                bgcolor="blue",
-                on_click=acceso
+                on_click=acceso,
+                style=ft.ButtonStyle(
+                    color={
+                        ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                        ft.ControlState.HOVERED: ft.Colors.BLACK,
+                    },
+                    bgcolor={
+                        ft.ControlState.DEFAULT: ft.Colors.BLACK,
+                        ft.ControlState.HOVERED: ft.Colors.WHITE,
+                    },
+                    side={
+                        ft.ControlState.HOVERED: ft.BorderSide(1, ft.Colors.BLACK),
+                    },
+                    elevation={
+                        ft.ControlState.DEFAULT: 2,
+                        ft.ControlState.HOVERED: 8,
+                    },
+                    animation_duration=200
+                )
             ),
             ft.TextButton(
                 content=ft.Text("¿No estoy registrado? Regístrate aquí"),
@@ -465,8 +523,7 @@ def main(page: ft.Page):
         ]
         
         login_container = crear_container_formulario("INICIAR SESIÓN", elementos)
-        page.add(login_container)
-        page.update()
+        mostrar_pantalla(login_container) 
     
     # Iniciar aplicación
     mostrar_login()
