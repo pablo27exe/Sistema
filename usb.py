@@ -1,3 +1,4 @@
+
 import os
 import subprocess
 import webbrowser
@@ -56,11 +57,11 @@ def generar_y_guardar_llave(usb_path: str):
                 check=True,
                 capture_output=True
             )
-            print(f'Archivo ocultado:{ruta_privada}')
+            #print(f'Archivo ocultado:{ruta_privada}')
     except Exception as e:
-        print(f'No se pudo ocultar el archivo: {e}')
+        #print(f'No se pudo ocultar el archivo: {e}')
         
-    return bytes_publicos.decode() #Devuelve la pública para almacenarla en la DB
+        return bytes_publicos.decode() #Devuelve la pública para almacenarla en la DB
 
 #Registro de llave
 

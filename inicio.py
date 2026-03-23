@@ -5,7 +5,7 @@ def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion = Non
     page.clean()
     
     def cerrar_sesion(_):
-        if on_cerrar_sesion(_):
+        if on_cerrar_sesion:
             on_cerrar_sesion()
         else:
             page.window.destroy()
