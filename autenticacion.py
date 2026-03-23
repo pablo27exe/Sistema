@@ -183,5 +183,36 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
                 
         threading.Thread(target=proceso_qr, daemon=True).start()
 
+    #FACIAL
+    elif tipo == "FACIAL":
+        def proceso_facial():
+            try:
+                from face import SistemaAutenticacionFacial
+                sistema = SistemaAutenticacionFacial()
+                verificado, confianza, mensaje = sistema.verificar_rostro_auto(
+                    usuario_id     = datos_usuario['id'],
+                    nombre_usuario = datos_usuario['username']
+                )
+                if verificado:
+                    page.run_thread(autenticacion_exitosa)
+                else:
+                    page.run_thread(lambda: fallback(
+                        f"Verificación facial fallida: {mensaje}"
+                    ))
+            except Exception as ex:
+                page.run_thread(lambda: fallback(
+                    f"Error en reconocimiento facial: {str(ex)}"
+                ))
+
+        crear_dialogo_con_imagen(
+            "FACE.ico",
+            "Verificación facial",
+            "• Colóquese frente a la cámara\n• Asegure buena iluminación\n• Mantenga el rostro centrado",
+            "info",
+            on_iniciar=lambda: threading.Thread(
+                target=proceso_facial, daemon=True
+            ).start()
+        )
+        
     else:
         fallback(f"Método '{tipo}' no reconocido.")

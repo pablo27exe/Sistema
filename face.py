@@ -91,7 +91,7 @@ class SistemaAutenticacionFacial:
         self.cargar_model_facial()
         
         # Verificar si el usuario existe en el modelo
-        if usuario_id in self.ids_a_usuarios.values():
+        if any(v["uuid"] == usuario_id for v in self.ids_a_usuarios.values()):
             print(f"Modelo cargado para usuario ID: {usuario_id}")
             return True
         else:
@@ -263,6 +263,7 @@ class SistemaAutenticacionFacial:
             if not ret:
                 continue
             
+            frame = cv2.flip(frame,1)
             gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             rostros_detectados = self.detector_rostros.detectMultiScale(
@@ -286,6 +287,9 @@ class SistemaAutenticacionFacial:
                 
                 # Predecir
                 id_predicho, confianza = self.reconocedor.predict(rostro_redim)
+                
+                if confianza < mejor_confianza:
+                    mejor_confianza = confianza
 
                 # Buscar el label entero correspondiente al UUID
                 label_usuario = next(
