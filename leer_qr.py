@@ -40,6 +40,7 @@ def leer_qr_camara(tiempo_espera: int = 25) -> tuple[bool, str]:
             cv2.putText(frame, "QR detectado!", (10, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             cv2.imshow("Verificacion QR", frame)
+            cv2.setWindowProperty("Verificacion QR", cv2.WND_PROP_TOPMOST, 1)
             cv2.waitKey(800)  # Mostrar un momento antes de cerrar
             camara.release()
             cv2.destroyAllWindows()
@@ -47,6 +48,7 @@ def leer_qr_camara(tiempo_espera: int = 25) -> tuple[bool, str]:
             return True, dato
 
         cv2.imshow("Verificacion QR", frame)
+        cv2.setWindowProperty("Verificacion QR", cv2.WND_PROP_TOPMOST, 1)
 
         if cv2.waitKey(1) & 0xFF == 27:  # ESC para cancelar
             break

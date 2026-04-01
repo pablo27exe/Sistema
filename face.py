@@ -178,7 +178,8 @@ class SistemaAutenticacionFacial:
                 print(f"Captura {capturas}/{capturas_requeridas}")
                 time.sleep(0.3)
             
-            cv2.imshow(ventana_nombre, frame_mostrar)       
+            cv2.imshow(ventana_nombre, frame_mostrar)
+            cv2.setWindowProperty(ventana_nombre, cv2.WND_PROP_TOPMOST, 1)       
             
             # Control de teclas
             key = cv2.waitKey(1) & 0xFF
@@ -312,7 +313,8 @@ class SistemaAutenticacionFacial:
                        (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 
                        0.5, (255, 255, 255), 1)
             
-            cv2.imshow("Verificacion Facial - Automática", frame_mostrar)
+            cv2.imshow("Verificacion Facial", frame_mostrar)
+            cv2.setWindowProperty("Verificacion Facial", cv2.WND_PROP_TOPMOST, 1)
             
             # Salir con ESC
             if cv2.waitKey(1) & 0xFF == 27:
