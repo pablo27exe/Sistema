@@ -25,8 +25,9 @@ def main(page: ft.Page):
     page.padding = 0
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
-    page.window_width = 1000
-    page.window_height = 1000
+    page.window.maximized = True
+    page.window_width = 800
+    page.window_height = 600
     
     dialogo_actual = None
     usuario_actual = None
@@ -88,22 +89,87 @@ def main(page: ft.Page):
         page.add(
             ft.Stack(
                 controls=[
-                    # Capa 1: fondo degradado ocupa todo
+                    # Capa 1: fondo degradado
                     ft.Container(
                         expand=True,
                         gradient=ft.LinearGradient(
                             begin=ft.Alignment(0, -1),
                             end=ft.Alignment(0, 1),
-                            colors=["#1a1a2e", "#16213e", "#0f3460"]
+                            # ==================== TONOS AZULES ALTERNATIVOS ====================
+                            # Azules más vibrantes
+                            # colors = ["#0a2f6c", "#1e4a8a", "#2c6e9e"]
+
+                            # Azules turquesa
+                            # colors = ["#0c4e6e", "#1b6b8f", "#2a8eb3"]
+
+                            # Azules nocturnos profundos
+                            # colors = ["#03045e", "#023e8a", "#0077b6"]
+
+
+                            # ==================== TONOS CÁLIDOS ====================
+                            # Atardecer
+                            # colors = ["#ff6b6b", "#f9a26c", "#ffd93d"]
+
+                            # Terracota
+                            # colors = ["#9e2a2b", "#e09d32", "#f5e6d3"]
+
+                            # Rosados
+                            # colors = ["#d4a5a5", "#e9c7c7", "#ffe6e6"]
+
+
+                            # ==================== TONOS VERDES ====================
+                            # Bosque
+                            # colors = ["#1a4d3e", "#2d6a4f", "#40916c"]
+
+                            # Menta
+                            # colors = ["#74c69d", "#95d5b2", "#b7e4c7"]
+
+                            # Esmeralda
+                            # colors = ["#006d77", "#2a9d8f", "#52b788"]
+
+
+                            # ==================== TONOS PÚRPURA ====================
+                            # Lavanda
+                            colors = ["#6c5b7b", "#8e7d9e", "#b0a1c1"]
+
+                            # Morado neón
+                            # colors = ["#7b2cbf", "#9d4edd", "#c77dff"]
+
+                            # Malva
+                            # colors = ["#5e4b56", "#806b75", "#a28b95"]
+
+
+                            # ==================== GRADIENTES CONTRASTE ====================
+                            # Noche a día
+                            # colors = ["#1e1e2f", "#4a4e6b", "#8a9bb5"]
+
+                            # Puesta de sol marina
+                            # colors = ["#0f2027", "#203a43", "#2c5364"]
+
+                            # Rosa a azul
+                            # colors = ["#ff9a9e", "#fad0c4", "#a1c4fd"]
+
+
+                            # ==================== GRADIENTES MONOCROMÁTICOS ====================
+                            # Gris elegante
+                            # colors = ["#2d3436", "#3b4448", "#4b5a5f"]
+
+                            # Beige cálido
+                            # colors = ["#e3d9ca", "#d9ceb8", "#cfc3a6"]
+
+                            # Coral
+                            # colors = ["#ff7e5e", "#ff8f6e", "#ffa07e"]
                         )
                     ),
-                    # Capa 2: cuadro centrado con tamaño fijo
+                    # Capa 2: contenedor centrado dinámicamente
                     ft.Container(
-                        content=contenido,
-                        width=460,
-                        height=560,
-                        top=100,
-                        left=400,
+                        expand=True,
+                        alignment=ft.Alignment(0, 0),
+                        content=ft.Container(
+                            content=contenido,
+                            width=460,
+                            height=660,
+                        )
                     )
                 ],
                 expand=True
