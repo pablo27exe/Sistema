@@ -46,3 +46,29 @@ def obtener_usuario_por_usuario(nombre_usuario: str):
 
     finally:
         devolver_conexion(conn) #liberar la conexion a la base de datos
+        
+    
+def eliminar_usuario(usuario_id: str) -> bool:
+    """
+    Eliminar un usuario y sus datos relacionados (CASCADE en BD).
+    Retorna True si fue exitoso, False si falló
+    """
+    
+    conn = None
+    try:
+        conn = establecer_conexion()
+        with conn.cursor() as cur:
+            cur.execute("""
+                        DELETE FROM usuarios
+                        WERE id = %s
+                        """, (usuario_id))
+        conn.commit()
+        print(f'Usuario {usuario_id} eliminado correctamente.')
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f'Error al eliminar usuario: {e}')
+        return False
+    finally:
+        devolver_conexion(conn)
