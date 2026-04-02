@@ -1,4 +1,3 @@
-import encodings
 import flet as ft
 import threading
 import time 
@@ -10,6 +9,8 @@ from qro import enviar_qr_por_bluetooth
 from face import SistemaAutenticacionFacial
 from usb import registrar_llave_usb, obtener_unidades_usb
 from inicio import mostrar_bienvenida
+from camara_compartida import CamaraCompartida
+
 
 #modulos de la base de datos
 from usuarios import insertar_usuario, obtener_usuario_por_usuario
@@ -33,6 +34,52 @@ def main(page: ft.Page):
     #variable global para simular usuarios
     next_user_id = 1
     usuarios_registrados = {}
+    
+    camara_facial = CamaraCompartida()
+    camara_qr     = camara_facial
+    camara_facial.iniciar()
+        
+    
+     # ── Diálogo que aparece si la cámara aún no está lista ───────────────
+    def verificar_camara_lista(camara, on_lista):
+        """
+        Verifica si la cámara está lista.
+        Si no, muestra un diálogo de espera y reintenta.
+        """
+        if camara.lista:
+            on_lista()
+            return
+
+        # Mostrar diálogo de espera
+        progress = ft.ProgressRing(width=30, height=30, stroke_width=3)
+        dialog_espera = ft.AlertDialog(
+            title=ft.Text("Preparando cámara", color=ft.Colors.BLUE),
+            content=ft.Column([
+                ft.Text("La cámara se está iniciando, espere un momento...", size=13),
+                ft.Row([progress], alignment="center")
+            ], tight=True, spacing=15),
+            actions=[]
+        )
+        page.overlay.append(dialog_espera)
+        dialog_espera.open = True
+        page.update()
+
+        def esperar_y_continuar():
+            lista = camara.esperar_lista(timeout=8)
+            def continuar():
+                dialog_espera.open = False
+                page.update()
+                if lista:
+                    on_lista()
+                else:
+                    crear_dialogo(
+                        "Error",
+                        f"No se pudo acceder a la cámara: {camara.error}",
+                        "error"
+                    )
+            page.run_thread(continuar)
+
+        threading.Thread(target=esperar_y_continuar, daemon=True).start()
     
     
     # ===== FUNCIONES AUXILIARES =====
@@ -285,23 +332,24 @@ def main(page: ft.Page):
                 time.sleep(2.2)
 
                 def on_iniciar_facial():
-                    sistema_facial = SistemaAutenticacionFacial()
+                    def iniciar():
+                        sistema_facial = SistemaAutenticacionFacial()
+                        def proceso_captura():
+                            try:
+                                success, dato_facial = sistema_facial.capturar_rostro_auto(
+                                    usuario_id     = datos_usuario['id'],
+                                    nombre_usuario = datos_usuario['username']
+                                )
+                                if success:
+                                    metodo_completado(tipo="FACIAL", dato_factor=dato_facial)
+                                else:
+                                    page.run_thread(lambda: crear_dialogo("Error", dato_facial, "error"))
+                            except Exception as ex:
+                                page.run_thread(lambda: crear_dialogo("Error", str(ex), "error"))
+                        threading.Thread(target=proceso_captura, daemon=True).start()
 
-                    def proceso_captura():
-                        try:
-                            success, dato_facial = sistema_facial.capturar_rostro_auto(
-                                usuario_id     = datos_usuario['id'],
-                                nombre_usuario = datos_usuario['username']
-                            )
-                            if success:
-                                metodo_completado(tipo="FACIAL", dato_factor=dato_facial)
-                            else:
-                                page.run_thread(lambda: crear_dialogo("Error", dato_facial, "error"))
-                        except Exception as ex:
-                            page.run_thread(lambda: crear_dialogo("Error", str(ex), "error"))
-
-                    threading.Thread(target=proceso_captura, daemon=True).start()
-
+                    verificar_camara_lista(camara_facial, iniciar)
+    
                 page.run_thread(lambda: crear_dialogo_con_imagen(
                     "FACE.ico",
                     "Instrucciones",
@@ -474,20 +522,25 @@ def main(page: ft.Page):
         
         tipo_metodo, dato_factor = metodo
         iniciar_segundo_factor(
-            page          = page,
-            datos_usuario = usuario_datos,
-            tipo          = tipo_metodo,
-            dato_factor   = dato_factor,
+            page                     = page,
+            datos_usuario            = usuario_datos,
+            tipo                     = tipo_metodo,
+            dato_factor              = dato_factor,
             crear_dialogo            = crear_dialogo,
             crear_dialogo_con_imagen = crear_dialogo_con_imagen,
             crear_dialogo_automatico = crear_dialogo_automatico,
             cerrar_dialogo           = cerrar_dialogo,
             mostrar_bienvenida       = mostrar_bienvenida,
-            mostrar_login            = mostrar_login
+            mostrar_login            = mostrar_login,
+            camara_facial            = camara_facial,
+            camara_qr                = camara_qr,
+            verificar_camara_lista   = verificar_camara_lista
         )
               
     def mostrar_login():
-
+        if not camara_facial.lista: 
+            camara_facial.reiniciar()
+        
         global usuario
         usuario = ft.TextField(label="Usuario", width=300)
         

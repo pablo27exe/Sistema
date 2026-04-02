@@ -4,6 +4,7 @@ import os
 import pickle
 import time
 from datetime import datetime
+import threading
 
 # import psycopg2
 # from psycopg2.extras import Json
@@ -233,105 +234,111 @@ class SistemaAutenticacionFacial:
             traceback.print_exc()
             return False, f"Error: {str(e)}"
         
-    def verificar_rostro_auto(self, usuario_id, nombre_usuario, tiempo_espera=30):
+    def verificar_rostro_auto(self, usuario_id, nombre_usuario,
+                           tiempo_espera=30,
+                           camara_precalentada=None):
         """
-        Versión automática de verificación facial
+        Versión automática de verificación facial.
         Retorna: (verificado, confianza, mensaje)
         """
         print(f"\nVerificando identidad para: {nombre_usuario} (ID: {usuario_id})")
-        
-        # Cargar modelo si es necesario
+
+        # ── Cargar modelo ────────────────────────────────────────────────────
         if not self.ids_a_usuarios:
             if not self.cargar_modelo_por_usuario(usuario_id):
                 return False, 0, "No hay modelo facial para este usuario"
-        
-        # Verificar cámara
-        camara = cv2.VideoCapture(0)
-        if not camara.isOpened():
-            return False, 0, "No se puede acceder a la cámara"
-        
-        camara.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        camara.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        icono_marco = cv2.imread("cv_resources/marco_rostro.png", cv2.IMREAD_UNCHANGED)
-        
-        tiempo_inicio = time.time()
-        verificado = False
-        mejor_confianza = 100  # Menor es mejor
-        
-        while time.time() - tiempo_inicio < tiempo_espera and not verificado:
-            ret, frame = camara.read()
-            if not ret:
-                continue
-            
-            frame = cv2.flip(frame,1)
-            gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            rostros_detectados = self.detector_rostros.detectMultiScale(
-                gris,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(100, 100)
-            )
-            
-            frame_mostrar = frame.copy()
-            
-            for (x, y, w, h) in rostros_detectados:
-                if icono_marco is not None:
-                    frame_mostrar = superponer_imagen(frame_mostrar, icono_marco, x, y, w, h)
-                else:
-                    cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                
-                # Si hay un rostro, intentar reconocer
-                region_rostro = gris[y:y+h, x:x+w]
-                rostro_redim = cv2.resize(region_rostro, (200, 200))
-                
-                # Predecir
-                id_predicho, confianza = self.reconocedor.predict(rostro_redim)
-                
-                if confianza < mejor_confianza:
-                    mejor_confianza = confianza
+        # Buscar label antes del loop para no repetirlo en cada frame
+        label_usuario = next(
+            (k for k, v in self.ids_a_usuarios.items() if v["uuid"] == usuario_id),
+            None
+        )
 
-                # Buscar el label entero correspondiente al UUID
-                label_usuario = next(
-                    (k for k, v in self.ids_a_usuarios.items() if v["uuid"] == usuario_id),
-                    None
+        # ── Obtener cámara ───────────────────────────────────────────────────
+        if camara_precalentada and camara_precalentada.lista:
+            camara = camara_precalentada.camara
+            print("Usando cámara precalentada.")
+            # Limpiar buffer acumulado
+            for _ in range(5):
+                camara.read()
+        else:
+            print("Abriendo cámara nueva.")
+            camara = cv2.VideoCapture(0)
+            if not camara.isOpened():
+                return False, 0, "No se puede acceder a la cámara"
+            camara.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            camara.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            camara_precalentada = None  # Para no liberar la externa en finally
+
+        icono_marco     = cv2.imread("cv_resources/marco_rostro.png", cv2.IMREAD_UNCHANGED)
+        tiempo_inicio   = time.time()
+        verificado      = False
+        mejor_confianza = 100
+
+        try:
+            while time.time() - tiempo_inicio < tiempo_espera and not verificado:
+                ret, frame = camara.read()
+                if not ret:
+                    continue
+
+                frame = cv2.flip(frame, 1)
+                gris  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                rostros_detectados = self.detector_rostros.detectMultiScale(
+                    gris, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100)
                 )
 
-                nombre_predicho = self.ids_a_usuarios.get(id_predicho, {}).get("nombre", "Desconocido")
-                texto = f"{nombre_predicho} ({100 - confianza:.1f}%)"
-                cv2.putText(frame_mostrar, texto, (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                frame_mostrar = frame.copy()
 
-                # Comparar label entero, no UUID
-                if id_predicho == label_usuario and confianza < 80:
-                    verificado = True
-            
-            # Mostrar tiempo restante
-            tiempo_restante = int(tiempo_espera - (time.time() - tiempo_inicio))
-            cv2.putText(frame_mostrar, f"Tiempo: {tiempo_restante}s", 
-                       (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 
-                       0.5, (255, 255, 255), 1)
-            
-            cv2.imshow("Verificacion Facial", frame_mostrar)
-            cv2.setWindowProperty("Verificacion Facial", cv2.WND_PROP_TOPMOST, 1)
-            
-            # Salir con ESC
-            if cv2.waitKey(1) & 0xFF == 27:
+                for (x, y, w, h) in rostros_detectados:
+                    if icono_marco is not None:
+                        frame_mostrar = superponer_imagen(frame_mostrar, icono_marco, x, y, w, h)
+                    else:
+                        cv2.rectangle(frame_mostrar, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+                    region_rostro = gris[y:y+h, x:x+w]
+                    rostro_redim  = cv2.resize(region_rostro, (200, 200))
+
+                    id_predicho, confianza = self.reconocedor.predict(rostro_redim)
+
+                    if confianza < mejor_confianza:
+                        mejor_confianza = confianza
+
+                    nombre_predicho = self.ids_a_usuarios.get(id_predicho, {}).get("nombre", "Desconocido")
+                    cv2.putText(frame_mostrar,
+                                f"{nombre_predicho} ({100 - confianza:.1f}%)",
+                                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+                    if id_predicho == label_usuario and confianza < 80:
+                        verificado = True
+                        cv2.putText(frame_mostrar, "VERIFICADO",
+                                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+                tiempo_restante = int(tiempo_espera - (time.time() - tiempo_inicio))
+                cv2.putText(frame_mostrar, f"Tiempo: {tiempo_restante}s",
+                            (10, frame.shape[0] - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+                cv2.imshow("Verificacion Facial", frame_mostrar)
+                cv2.setWindowProperty("Verificacion Facial", cv2.WND_PROP_TOPMOST, 1)
+
+                if cv2.waitKey(1) & 0xFF == 27:
+                    return False, mejor_confianza, "Verificación cancelada"
+
+        finally:
+            cv2.destroyAllWindows()
+            # Solo liberar si fue abierta localmente
+            if camara_precalentada is None:
                 camara.release()
-                cv2.destroyAllWindows()
-                return False, mejor_confianza, "Verificación cancelada"
-        
-        camara.release()
-        cv2.destroyAllWindows()
-        
+            else:
+                camara_precalentada.liberar()
+
         if verificado:
             return True, mejor_confianza, "Verificación exitosa"
+        elif mejor_confianza < 100:
+            return False, mejor_confianza, f"No se pudo verificar (mejor confianza: {mejor_confianza})"
         else:
-            if mejor_confianza < 100:
-                return False, mejor_confianza, f"No se pudo verificar (mejor confianza: {mejor_confianza})"
-            else:
-                return False, mejor_confianza, "No se detectó ningún rostro"
+            return False, mejor_confianza, "No se detectó ningún rostro"
     
 
 def verificar_instalacion():

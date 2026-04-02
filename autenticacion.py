@@ -1,3 +1,4 @@
+from nt import error
 import os
 import threading
 import time
@@ -6,12 +7,18 @@ from cryptography.hazmat.primitives import serialization
 from usb import obtener_unidades_usb
 from credenciales import verificar_contrasena
 from leer_qr import leer_qr_camara
+from face import SistemaAutenticacionFacial
 
 
+# autenticacion.py — actualizar la firma de la función
 def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: str,
                             crear_dialogo, crear_dialogo_con_imagen,
                             crear_dialogo_automatico, cerrar_dialogo,
-                            mostrar_bienvenida, mostrar_login):
+                            mostrar_bienvenida, mostrar_login,
+                            camara_facial=None,          # ← agregar
+                            camara_qr=None,              # ← agregar
+                            verificar_camara_lista=None  # ← agregar
+                            ):
     """
     Maneja el flujo completo de autenticación por segundo factor.
     Recibe las funciones de UI como parámetros para no depender de main.
@@ -151,6 +158,8 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
     
     #QR    
     elif tipo == 'QR':
+        _camara_qr = camara_qr
+        
         crear_dialogo_automatico(
             'Verificación QR',
             'Abriendo cámara para leer tu código QR...',
@@ -159,9 +168,15 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
         )
         
         def proceso_qr():
-            time.sleep(2.2)
+            time.sleep(0.1)
             try:
-                exito, dato_leido = leer_qr_camara(tiempo_espera=25)
+                print(f"Antes de llamar - _camara_qr: {_camara_qr}")
+                print(f"Antes de llamar - lista: {_camara_qr.lista if _camara_qr else 'None'}")
+                
+                exito, dato_leido = leer_qr_camara(
+                    tiempo_espera       = 30,
+                    camara_precalentada = _camara_qr
+                )
                  
                 if not exito:
                      page.run_thread(lambda: fallback(
@@ -186,12 +201,14 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
     #FACIAL
     elif tipo == "FACIAL":
         def proceso_facial():
+            _camara_facial = camara_facial
+            print(f"Estado cámara al iniciar FACIAL: lista={_camara_facial.lista}, error={_camara_facial.error}")
             try:
-                from face import SistemaAutenticacionFacial
                 sistema = SistemaAutenticacionFacial()
                 verificado, confianza, mensaje = sistema.verificar_rostro_auto(
-                    usuario_id     = datos_usuario['id'],
-                    nombre_usuario = datos_usuario['username']
+                    usuario_id          = datos_usuario['id'],
+                    nombre_usuario      = datos_usuario['username'],
+                    camara_precalentada = _camara_facial  # ← pasar aquí
                 )
                 if verificado:
                     page.run_thread(autenticacion_exitosa)
@@ -200,8 +217,9 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
                         f"Verificación facial fallida: {mensaje}"
                     ))
             except Exception as ex:
+                error_message = str(ex)
                 page.run_thread(lambda: fallback(
-                    f"Error en reconocimiento facial: {str(ex)}"
+                    f"Error en reconocimiento facial: {error_message}"
                 ))
 
         crear_dialogo_con_imagen(
