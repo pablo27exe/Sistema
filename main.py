@@ -379,10 +379,46 @@ def main(page: ft.Page):
 
             def proceso():
                 exito, mensaje, contrasena_qr = enviar_qr_por_bluetooth()
-                if exito and contrasena_qr:
-                    metodo_completado(tipo="QR", dato_factor=contrasena_qr)
-                else: 
+
+                if not exito or not contrasena_qr:
                     page.run_thread(lambda: crear_dialogo("Error", mensaje, "error"))
+                    return
+
+                # Pedir confirmación de que el QR fue recibido
+                def mostrar_confirmacion():
+                    def on_confirmar():
+                        cerrar_dialogo(dialog_confirm)
+                        metodo_completado(tipo="QR", dato_factor=contrasena_qr)
+
+                    def on_cancelar():
+                        cerrar_dialogo(dialog_confirm)
+                        crear_dialogo(
+                            "Cancelado",
+                            "El registro del QR fue cancelado.",
+                            "info"
+                        )
+
+                    dialog_confirm = ft.AlertDialog(
+                        title=ft.Text("¿Recibiste el QR?", color=ft.Colors.BLUE),
+                        content=ft.Text(
+                            "Confirma que el código QR fue recibido correctamente en tu teléfono.",
+                            size=13
+                        ),
+                        actions=[
+                            ft.TextButton("No recibí", on_click=lambda e: on_cancelar()),
+                            ft.TextButton(
+                                "Sí, lo recibí",
+                                on_click=lambda e: on_confirmar(),
+                                style=ft.ButtonStyle(color=ft.Colors.GREEN)
+                            ),
+                        ],
+                        actions_alignment=ft.MainAxisAlignment.END
+                    )
+                    page.overlay.append(dialog_confirm)
+                    dialog_confirm.open = True
+                    page.update()
+
+                page.run_thread(mostrar_confirmacion)
 
             threading.Thread(target=proceso, daemon=True).start()
             

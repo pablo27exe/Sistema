@@ -43,39 +43,9 @@ class GeneradorQR:
         print(f"QR guardado en: {ruta}")
 
 
-# ── Bluetooth ───────────────────────────────────────────────────────────────
-def enviar_por_bluetooth(longitud: int = 12) -> tuple[bool, str, str | None]:
-    ruta_qr = os.path.join(CARPETA_TEMP, 'qr_temp.png')
-    
-    try:
-        #Generar contraseña
-        contrasena = GeneradorContrasena(longitud=longitud).generar()
-        
-        #Generar QR
-        GeneradorQR(version=5, box_size=8).generar_y_guardar(contrasena, ruta_qr)
-        
-        #Intentar enviar por Bluetooth
-        exito_bt, mensaje_bt = enviar_por_bluetooth(ruta_qr)
-        print(f'Bluetooth: {mensaje_bt}')
-        
-        #eliminar imagen temporal
-        _eliminar_tras_espera(ruta_qr, segundos=30)
-        
-        #guardar datos
-        registro.guardar(contrasena)
-        
-        #retorna True siempre que se genere la contraseña, independientemente del bluetooth
-        return True, mensaje_bt, contrasena
-    
-    except Exception as error:
-        if os.path.exists(ruta_qr):
-            os.remove(ruta_qr)
-        return False, f'Error: {error}', None
-
-
 # ── Eliminación diferida del archivo temporal ───────────────────────────────
 def _eliminar_tras_espera(ruta: str, segundos: int = 30) -> None:
-    """Elimina el archivo de imagen después de `segundos` para dar tiempo a la transferencia."""
+    """Elimina el archivo de imagen después de segundos para dar tiempo a la transferencia."""
     def _tarea():
         time.sleep(segundos)
         try:
@@ -87,11 +57,37 @@ def _eliminar_tras_espera(ruta: str, segundos: int = 30) -> None:
     threading.Thread(target=_tarea, daemon=True).start()
 
 
+# ── Bluetooth ───────────────────────────────────────────────────────────────
+def enviar_por_bluetooth(ruta_archivo: str) -> tuple[bool, str]:
+    """
+    Intenta enviar el archivo usando fsquirt (herramienta nativa de Windows).
+    Si falla, abre el Explorador con el archivo seleccionado para envío manual.
+    Retorna (exito, mensaje).
+    """
+    if not os.path.exists(ruta_archivo):
+        return False, f"Archivo no encontrado: {ruta_archivo}"
+
+    ruta_completa = os.path.abspath(ruta_archivo)
+
+    # Intentar con asistente nativo de Bluetooth
+    resultado = subprocess.run(
+        f'fsquirt -send "{ruta_completa}"',
+        shell=True,
+        capture_output=True,
+    )
+    if resultado.returncode == 0:
+        print("Asistente de Bluetooth abierto correctamente.")
+        return True, "Asistente de Bluetooth abierto"
+
+    # Fallback: abrir carpeta con el archivo seleccionado
+    print("fsquirt no disponible — abriendo carpeta para envío manual.")
+    subprocess.run(f'explorer /select,"{ruta_completa}"', shell=True)
+    return True, "Archivo listo para compartir manualmente"
+
+
 # ── Registro de datos (preparado para BD) ───────────────────────────────────
 class RegistroContrasena:
-    """
-    Almacenará los datos generados en memoria hasta que se integre la base de datos.
-    """
+    """Almacena los datos generados en memoria hasta integrar la base de datos."""
     def __init__(self):
         self._registros: list[dict] = []
 
@@ -102,7 +98,6 @@ class RegistroContrasena:
             "fecha": datetime.now().isoformat(),
         }
         self._registros.append(registro)
-        # Aquí irá el registro en la base de datos
         return registro
 
     def obtener_todos(self) -> list[dict]:
@@ -117,7 +112,7 @@ registro = RegistroContrasena()
 def enviar_qr_por_bluetooth(longitud: int = 12) -> tuple[bool, str, str | None]:
     """
     Genera una contraseña, crea su QR, lo envía por Bluetooth y guarda los datos.
-    Retorna (éxito, mensaje, contraseña).
+    Retorna (exito, mensaje, contraseña).
     """
     ruta_qr = os.path.join(CARPETA_TEMP, "qr_temp.png")
 
@@ -130,30 +125,20 @@ def enviar_qr_por_bluetooth(longitud: int = 12) -> tuple[bool, str, str | None]:
         GeneradorQR(version=5, box_size=8).generar_y_guardar(contrasena, ruta_qr)
 
         # 3. Enviar por Bluetooth
-        exito, mensaje = enviar_por_bluetooth(ruta_qr)
+        exito_bt, mensaje_bt = enviar_por_bluetooth(ruta_qr)
+        print(f"Bluetooth: {mensaje_bt}")
 
-        # 4. Programar eliminación de la imagen (los datos se conservan)
+        # 4. Programar eliminación de la imagen temporal
         _eliminar_tras_espera(ruta_qr, segundos=30)
 
-        # 5. Guardar datos (en memoria por ahora; listo para BD)
+        # 5. Guardar datos en memoria
         registro.guardar(contrasena)
 
-        return exito, mensaje, contrasena
+        # Retorna True siempre que se generó la contraseña,
+        # independientemente del resultado del Bluetooth
+        return True, mensaje_bt, contrasena
 
     except Exception as error:
-        # Limpiar imagen si algo falló antes de la transferencia
         if os.path.exists(ruta_qr):
             os.remove(ruta_qr)
         return False, f"Error: {error}", None
-
-
-# ── Prueba local ─────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    exito, mensaje, contrasena = enviar_qr_por_bluetooth(longitud=12)
-
-    if exito:
-        print(f"\nContraseña : {contrasena}")
-        print(f"Mensaje    : {mensaje}")
-        print("La imagen se eliminará en 30 s; los datos quedan en memoria para la BD.")
-    else:
-        print(f"\nError: {mensaje}")
