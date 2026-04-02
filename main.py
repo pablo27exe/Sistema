@@ -13,7 +13,7 @@ from camara_compartida import CamaraCompartida
 
 
 #modulos de la base de datos
-from usuarios import insertar_usuario, obtener_usuario_por_usuario
+from usuarios import insertar_usuario, obtener_usuario_por_usuario, eliminar_usuario
 from credenciales import insertar_credencial, verificar_contrasena
 from segundo_metodo import insertar_metodo, obtener_metodo_por_usuario
 
@@ -311,6 +311,33 @@ def main(page: ft.Page):
 
         # Estado compartido
         metodo_elegido = {"valor": False}
+        def confirmar_volver_inicio(_):
+            def on_confirmar():
+                cerrar_dialogo(dialog_confirmacion)
+                #eliminar usuario si aun no completó el registro
+                if not metodo_elegido["valor"]:
+                    eliminar_usuario(usuario_data['id'])
+                mostrar_login()
+                
+            def on_cancelar():
+                cerrar_dialogo(dialog_confirmacion)
+                
+            dialog_confirmacion = ft.AlertDialog(
+                title=ft.Text('¿Volver a inicio?'),
+                content=ft.Text(
+                    "Si vuelves al inicio, tu registro será cancelado y tus datos serán eliminados. ¿Deseas continuar?",size=13
+                ),
+                actions=[
+                    ft.TextButton('Cancelar', on_click=lambda e: on_cancelar()),
+                    ft.TextButton('Sí',
+                                  on_click=lambda e: on_confirmar()),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END
+            )
+            page.overlay.append(dialog_confirmacion)
+            dialog_confirmacion.open = True
+            page.update()
+            
 
         def deshabilitar_botones():
             btn_qr.disabled     = True
@@ -441,7 +468,7 @@ def main(page: ft.Page):
             ft.Container(height=20),
             ft.TextButton(
                 content=ft.Text("Volver al inicio"),
-                on_click=lambda _: mostrar_login(),
+                on_click=confirmar_volver_inicio,
             ),
         ]
 
