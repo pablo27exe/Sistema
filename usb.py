@@ -86,7 +86,7 @@ def registrar_llave_usb(username: str, on_success, on_error, on_usb_encontrado):
                 
                 on_success(clave_publica)
                 
-                webbrowser.open(usb_path)
+                #webbrowser.open(usb_path)
                 
             except PermissionError:
                 on_error("Sin permisos para escribir en el USB. Intenta como administrador.")

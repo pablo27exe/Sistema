@@ -130,7 +130,7 @@ def main(page: ft.Page):
 
                             # ==================== TONOS PÚRPURA ====================
                             # Lavanda
-                            colors = ["#6c5b7b", "#8e7d9e", "#b0a1c1"]
+                            #colors = ["#6c5b7b", "#8e7d9e", "#b0a1c1"]
 
                             # Morado neón
                             # colors = ["#7b2cbf", "#9d4edd", "#c77dff"]
@@ -144,10 +144,10 @@ def main(page: ft.Page):
                             # colors = ["#1e1e2f", "#4a4e6b", "#8a9bb5"]
 
                             # Puesta de sol marina
-                            # colors = ["#0f2027", "#203a43", "#2c5364"]
+                            #colors = ["#0f2027", "#203a43", "#2c5364"]
 
                             # Rosa a azul
-                            # colors = ["#ff9a9e", "#fad0c4", "#a1c4fd"]
+                            colors = ["#ff9a9e", "#fad0c4", "#a1c4fd"]
 
 
                             # ==================== GRADIENTES MONOCROMÁTICOS ====================
@@ -359,7 +359,11 @@ def main(page: ft.Page):
             )
 
             if bien:
-                page.run_thread(lambda: mostrar_bienvenida(page, usuario_data))
+                page.run_thread(lambda: mostrar_bienvenida(
+                    page,
+                    usuario_data,
+                    on_cerrar_sesion=lambda: mostrar_login()
+                    ))
             else:
                 metodo_elegido["valor"] = False
                 page.run_thread(lambda: crear_dialogo(

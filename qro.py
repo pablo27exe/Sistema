@@ -44,30 +44,33 @@ class GeneradorQR:
 
 
 # ── Bluetooth ───────────────────────────────────────────────────────────────
-def enviar_por_bluetooth(ruta_archivo: str) -> tuple[bool, str]:
-    """
-    Intenta enviar el archivo usando fsquirt (herramienta nativa de Windows).
-    Si falla, abre el Explorador con el archivo seleccionado para envío manual.
-    """
-    if not os.path.exists(ruta_archivo):
-        return False, f"Archivo no encontrado: {ruta_archivo}"
-
-    ruta_completa = os.path.abspath(ruta_archivo)
-
-    # 1: asistente nativo de Bluetooth
-    resultado = subprocess.run(
-        f'fsquirt -send "{ruta_completa}"',
-        shell=True,
-        capture_output=True,
-    )
-    if resultado.returncode == 0:
-        print("Asistente de Bluetooth abierto correctamente.")
-        return True, "Asistente de Bluetooth abierto"
-
-    # 2: abrir carpeta con el archivo seleccionado
-    print("fsquirt no disponible — abriendo carpeta para envío manual.")
-    subprocess.run(f'explorer /select,"{ruta_completa}"', shell=True)
-    return True, "Archivo listo para compartir manualmente"
+def enviar_por_bluetooth(longitud: int = 12) -> tuple[bool, str, str | None]:
+    ruta_qr = os.path.join(CARPETA_TEMP, 'qr_temp.png')
+    
+    try:
+        #Generar contraseña
+        contrasena = GeneradorContrasena(longitud=longitud).generar()
+        
+        #Generar QR
+        GeneradorQR(version=5, box_size=8).generar_y_guardar(contrasena, ruta_qr)
+        
+        #Intentar enviar por Bluetooth
+        exito_bt, mensaje_bt = enviar_por_bluetooth(ruta_qr)
+        print(f'Bluetooth: {mensaje_bt}')
+        
+        #eliminar imagen temporal
+        _eliminar_tras_espera(ruta_qr, segundos=30)
+        
+        #guardar datos
+        registro.guardar(contrasena)
+        
+        #retorna True siempre que se genere la contraseña, independientemente del bluetooth
+        return True, mensaje_bt, contrasena
+    
+    except Exception as error:
+        if os.path.exists(ruta_qr):
+            os.remove(ruta_qr)
+        return False, f'Error: {error}', None
 
 
 # ── Eliminación diferida del archivo temporal ───────────────────────────────
