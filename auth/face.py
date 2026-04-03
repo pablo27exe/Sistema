@@ -66,10 +66,18 @@ class SistemaAutenticacionFacial:
         """Carga el modelo de reconocimiento facial completo"""
         try:
             if os.path.exists(self.ruta_modelo):
-                self.reconocedor.read(self.ruta_modelo)
-                print("Modelo facial cargado")
-            else:
-                print("No hay modelo facial previo")
+                try:
+                    self.reconocedor.read(self.ruta_modelo)
+                    print("Modelo facial cargado correctamente")
+                except Exception as e:
+                    print(f"Error cargando modelo (posiblemente corrupto): {e}")
+                    print(f"Eliminando archivo corrupto: {self.ruta_modelo}")
+                    try:
+                        os.remove(self.ruta_modelo)
+                    except:
+                        pass
+                    self.reconocedor = cv2.face.LBPHFaceRecognizer_create()
+                    print("Modelo reiniciado")
 
             if os.path.exists(self.ruta_ids):
                 with open(self.ruta_ids, "rb") as f:
@@ -105,7 +113,7 @@ class SistemaAutenticacionFacial:
             self.reconocedor.save(self.ruta_modelo)
             with open(self.ruta_ids, "wb") as f:
                 pickle.dump(self.ids_a_usuarios, f)
-            print("Modelo facial guardado")
+            print(f"Modelo facial guardado en: {self.ruta_modelo}")
             return True
         except Exception as e:
             print(f"Error guardando modelo facial: {e}")
@@ -200,32 +208,58 @@ class SistemaAutenticacionFacial:
             return False, f"No hay suficientes capturas ({len(rostros)}/20)"
     
     def entrenar_modelo_usuario(self, rostros, usuario_id, nombre_usuario):
+        """Entrena el modelo facial con los rostros capturados"""
         try:
-            if usuario_id not in [v["uuid"] for v in self.ids_a_usuarios.values()]:
+            # Buscar o crear label para el usuario
+            label_int = None
+            for k, v in self.ids_a_usuarios.items():
+                if v["uuid"] == usuario_id:
+                    label_int = k
+                    break
+            
+            if label_int is None:
                 label_int = len(self.ids_a_usuarios)
                 self.ids_a_usuarios[label_int] = {
                     "uuid": usuario_id,
                     "nombre": nombre_usuario
                 }
-            else:
-                label_int = next(
-                    k for k, v in self.ids_a_usuarios.items()
-                    if v["uuid"] == usuario_id
-                )
+                print(f"Nuevo label {label_int} creado para {nombre_usuario}")
 
+            # Preparar datos
             rostros_arreglo = np.array(rostros, dtype=np.uint8)
-            ids_arreglo     = np.full(len(rostros), label_int, dtype=np.int32)
+            ids_arreglo = np.full(len(rostros), label_int, dtype=np.int32)
 
-            if os.path.exists(self.ruta_modelo):  # ← ruta centralizada
+            # Verificar si el modelo existe y no está corrupto
+            modelo_cargado = False
+            if os.path.exists(self.ruta_modelo):
+                try:
+                    self.reconocedor.read(self.ruta_modelo)
+                    modelo_cargado = True
+                    print("Modelo existente cargado")
+                except Exception as e:
+                    print(f"Modelo corrupto, eliminando: {e}")
+                    try:
+                        os.remove(self.ruta_modelo)
+                        print("Archivo corrupto eliminado")
+                    except:
+                        pass
+                    self.reconocedor = cv2.face.LBPHFaceRecognizer_create()
+                    modelo_cargado = False
+
+            # Entrenar o actualizar
+            if modelo_cargado:
                 print("Actualizando modelo existente")
-                self.reconocedor.read(self.ruta_modelo)
                 self.reconocedor.update(rostros_arreglo, ids_arreglo)
             else:
                 print("Creando nuevo modelo")
+                # Si no hay modelo o estaba corrupto, necesitamos todos los rostros
+                # Para un nuevo modelo, necesitamos todos los rostros del usuario
+                # Intentar cargar rostros existentes si los hay
                 self.reconocedor.train(rostros_arreglo, ids_arreglo)
 
+            # Guardar modelo
             if self.guardar_modelo_facial():
-                return True, f"Modelo entrenado exitosamente para {nombre_usuario}"
+                return True, f"Modelo entrenado exitosamente para {nombre_usuario} con {len(rostros)} rostros"
             else:
                 return False, "Error guardando el modelo facial"
 
