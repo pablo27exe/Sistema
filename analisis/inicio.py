@@ -1,52 +1,12 @@
 import flet as ft
-import pandas as pd
 
 def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion=None):
-    """Muestra un mensaje de bienvenida temporal (diálogo) y luego va al sistema principal"""
-    
-    def cerrar_dialogo(_):
-        dialog.open = False
-        page.update()
-        # Después del diálogo, mostrar el sistema principal
-        mostrar_sistema_principal(page, usuario_data, on_cerrar_sesion)
-    
-    def cerrar_sesion(_):
-        dialog.open = False
-        page.update()
-        if on_cerrar_sesion:
-            on_cerrar_sesion()
-        else:
-            page.window.close()
-    
-    # Diálogo de bienvenida
-    acciones = [ft.TextButton("Continuar", on_click=cerrar_dialogo)]
-    
-    if on_cerrar_sesion:
-        acciones.insert(0, ft.TextButton("Cerrar sesión", on_click=cerrar_sesion))
-    
-    dialog = ft.AlertDialog(
-        modal=True,
-        content=ft.Container(
-            content=ft.Column([
-                ft.Text("✓", size=60, color=ft.Colors.GREEN, weight=ft.FontWeight.BOLD),
-                ft.Text("¡Bienvenido!", size=24, weight=ft.FontWeight.BOLD),
-                ft.Text(f"{usuario_data['nombre']}", size=20),
-                ft.Text("Has iniciado sesión correctamente.", size=14, color=ft.Colors.GREY_600),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-            padding=30,
-            width=350,
-        ),
-        actions=acciones,
-        actions_alignment=ft.MainAxisAlignment.CENTER,
-    )
-    
-    page.dialog = dialog
-    dialog.open = True
-    page.update()
+    """Redirige directamente al sistema principal (la bienvenida está integrada allí)"""
+    mostrar_sistema_principal(page, usuario_data, on_cerrar_sesion)
 
 
 def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesion=None):
-    """Pantalla principal del Sistema SCINCE con barra superior fija"""
+    """Pantalla principal del Sistema SCINCE con barra superior fija (bienvenida integrada)"""
     page.clean()
     
     page.title = "Sistema SCINCE"
@@ -60,7 +20,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         else:
             page.window.close()
 
-    # --- Barra superior con info de usuario y botón cerrar sesión ---
+    # --- Barra superior con info de usuario (bienvenida integrada) ---
     topbar = ft.Container(
         content=ft.Row([
             ft.Row([
@@ -97,6 +57,20 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.GREY_200)
     )
 
+    # Saludo de bienvenida en la página principal
+    saludo = ft.Text(
+        f"¡Hola {usuario_data['nombre']}!",
+        size=28,
+        weight=ft.FontWeight.BOLD,
+        color=ft.Colors.BLUE_800
+    )
+    
+    subtitulo = ft.Text(
+        "Selecciona un módulo para comenzar",
+        size=14,
+        color=ft.Colors.GREY_600
+    )
+
     def modulo_card(titulo, descripcion, color):
         return ft.Card(
             content=ft.Container(
@@ -118,19 +92,6 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             ),
             elevation=5,
         )
-
-    saludo = ft.Text(
-        f"¡Hola {usuario_data['nombre']}!",
-        size=28,
-        weight=ft.FontWeight.BOLD,
-        color=ft.Colors.BLUE_800
-    )
-    
-    subtitulo = ft.Text(
-        "Selecciona un módulo para comenzar",
-        size=14,
-        color=ft.Colors.GREY_600
-    )
 
     cards = ft.Row([
         modulo_card("Gestión de datos", "Filtra por sector y alcance", ft.Colors.BLUE_100),

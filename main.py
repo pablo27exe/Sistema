@@ -573,7 +573,7 @@ def main(page: ft.Page):
             'nombre': nombre.value,
         }
             
-        crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora  tu método de verificación.", "exito")
+        crear_dialogo("Registro exitoso", f"Bienvenido {nombre.value}. Ahora tu método de verificación.", "exito")
         mostrar_verificacion(usuario_data)
 
       
@@ -715,3 +715,4 @@ def main(page: ft.Page):
     mostrar_login()
 
 ft.app(target=main, assets_dir="auth/assets") 
+

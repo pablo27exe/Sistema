@@ -86,7 +86,7 @@ def iniciar_segundo_factor(page, datos_usuario: dict, tipo: str, dato_factor: st
     if tipo == "USB":
         crear_dialogo_automatico(
             "Verificación USB",
-            "Conecta tu llave USB...",
+            "Leyendo llave USB...",
             "info",
             duracion=2
         )
