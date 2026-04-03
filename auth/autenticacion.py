@@ -4,10 +4,10 @@ import threading
 import time
 import flet as ft
 from cryptography.hazmat.primitives import serialization
-from usb import obtener_unidades_usb
-from credenciales import verificar_contrasena
-from leer_qr import leer_qr_camara
-from face import SistemaAutenticacionFacial
+from .usb import obtener_unidades_usb
+from .credenciales import verificar_contrasena
+from .leer_qr import leer_qr_camara
+from .face import SistemaAutenticacionFacial
 
 
 # autenticacion.py — actualizar la firma de la función

@@ -5,20 +5,20 @@ import re
 import os
 
 #importar los modulos de los scripts
-from qro import enviar_qr_por_bluetooth
-from face import SistemaAutenticacionFacial
-from usb import registrar_llave_usb, obtener_unidades_usb
-from inicio import mostrar_bienvenida
-from camara_compartida import CamaraCompartida
+from auth.qro import enviar_qr_por_bluetooth
+from auth.face import SistemaAutenticacionFacial
+from auth.usb import registrar_llave_usb, obtener_unidades_usb
+from analisis.inicio import mostrar_bienvenida
+from auth.camara_compartida import CamaraCompartida
 
 
 #modulos de la base de datos
-from usuarios import insertar_usuario, obtener_usuario_por_usuario, eliminar_usuario
-from credenciales import insertar_credencial, verificar_contrasena
-from segundo_metodo import insertar_metodo, obtener_metodo_por_usuario
+from auth.usuarios import insertar_usuario, obtener_usuario_por_usuario, eliminar_usuario
+from auth.credenciales import insertar_credencial, verificar_contrasena
+from auth.segundo_metodo import insertar_metodo, obtener_metodo_por_usuario
 
 #auntenticacion
-from autenticacion import iniciar_segundo_factor
+from auth.autenticacion import iniciar_segundo_factor
 
 def main(page: ft.Page):
     page.title = "Sistema de Autenticación"
@@ -714,4 +714,4 @@ def main(page: ft.Page):
     # Iniciar aplicación
     mostrar_login()
 
-ft.app(target=main, assets_dir="assets")
+ft.app(target=main, assets_dir="auth/assets")

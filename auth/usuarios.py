@@ -1,5 +1,5 @@
 import re
-from db import establecer_conexion, devolver_conexion #importar las funciones de la base de datos
+from .db import establecer_conexion, devolver_conexion #importar las funciones de la base de datos
 
 def insertar_usuario(nombre: str, nombre_usuario: str):
     """Inserta un nuevo usuario en la base de datos en la tabla usuarios.
@@ -60,8 +60,8 @@ def eliminar_usuario(usuario_id: str) -> bool:
         with conn.cursor() as cur:
             cur.execute("""
                         DELETE FROM usuarios
-                        WERE id = %s
-                        """, (usuario_id))
+                        WHERE id = %s
+                        """, (usuario_id,))
         conn.commit()
         print(f'Usuario {usuario_id} eliminado correctamente.')
         return True
