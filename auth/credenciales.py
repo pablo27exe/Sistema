@@ -1,6 +1,6 @@
 import bcrypt
 from psycopg2.extensions import cursor
-from .db import establecer_conexion, devolver_conexion
+from auth.db import establecer_conexion, devolver_conexion
 
 def hash_contrasena(contrasena: str) -> str:
     """convierte la contraseña en un hash de bcrypt"""

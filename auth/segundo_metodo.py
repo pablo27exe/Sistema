@@ -1,5 +1,5 @@
 from typing import final
-from .db import establecer_conexion, devolver_conexion
+from auth.db import establecer_conexion, devolver_conexion
 
 def insertar_metodo(usuario_id : str, tipo: str, dato_factor: str = None):
     """

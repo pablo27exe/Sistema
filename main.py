@@ -362,7 +362,7 @@ def main(page: ft.Page):
                 page.run_thread(lambda: mostrar_bienvenida(
                     page,
                     usuario_data,
-                    on_cerrar_sesion=lambda: mostrar_login()
+                    on_cerrar_sesion= lambda: mostrar_login()
                     ))
             else:
                 metodo_elegido["valor"] = False
@@ -714,4 +714,4 @@ def main(page: ft.Page):
     # Iniciar aplicación
     mostrar_login()
 
-ft.app(target=main, assets_dir="auth/assets")
+ft.app(target=main, assets_dir="auth/assets") 

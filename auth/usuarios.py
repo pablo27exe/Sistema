@@ -1,5 +1,5 @@
 import re
-from .db import establecer_conexion, devolver_conexion #importar las funciones de la base de datos
+from auth.db import establecer_conexion, devolver_conexion #importar las funciones de la base de datos
 
 def insertar_usuario(nombre: str, nombre_usuario: str):
     """Inserta un nuevo usuario en la base de datos en la tabla usuarios.
