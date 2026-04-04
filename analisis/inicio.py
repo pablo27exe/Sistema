@@ -1,32 +1,57 @@
 import flet as ft
+from datetime import datetime
+import sys
 
-def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion=None):
-    """Redirige directamente al sistema principal (la bienvenida está integrada allí)"""
-    mostrar_sistema_principal(page, usuario_data, on_cerrar_sesion)
+def obtener_saludo():
+    hora_actual = datetime.now().hour
+    if 5 <= hora_actual < 12:
+        return "¡Buenos días"
+    elif 12 <= hora_actual <= 18:
+        return "¡Buenas tardes"
+    else:
+        return "¡Buenas noches"
 
 
 def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesion=None):
-    """Pantalla principal del Sistema SCINCE con barra superior fija (bienvenida integrada)"""
     page.clean()
-    
     page.title = "Sistema SCINCE"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = "#f5f5f5"
     page.padding = 0
 
-    def cerrar_sesion(_):
-        if on_cerrar_sesion:
-            on_cerrar_sesion()
-        else:
-            page.window.close()
+    def confirmar_cerrar_sesion(_):
+        def on_confirmar(e):
+            dialog.open = False
+            page.update()
+            page.window.destroy()
+            sys.exit(0)
 
-    # --- Barra superior con info de usuario (bienvenida integrada) ---
+        def on_cancelar(e):
+            dialog.open = False
+            page.update()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Cerrar sesión", color=ft.Colors.RED_400),
+            content=ft.Text("¿Estás seguro de que deseas cerrar sesión?"),
+            actions=[
+                ft.TextButton("Cancelar", on_click=on_cancelar),
+                ft.TextButton(
+                    "Sí, cerrar sesión",
+                    on_click=on_confirmar,
+                    style=ft.ButtonStyle(color=ft.Colors.RED_400)
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog = dialog
+        dialog.open = True
+        page.update()
+
+    # --- Barra superior ---
     topbar = ft.Container(
         content=ft.Row([
-            ft.Row([
-                ft.Text("📊", size=24),
-                ft.Text("Sistema SCINCE · Análisis de datos", size=18, weight="bold"),
-            ]),
+            ft.Text("Sistema de Análisis de datos", size=18, weight="bold"),
             ft.Row([
                 ft.Container(
                     content=ft.Row([
@@ -43,11 +68,8 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
                     padding=ft.Padding.only(right=15)
                 ),
                 ft.TextButton(
-                    content=ft.Row([
-                        ft.Text("🚪", size=16),
-                        ft.Text("Cerrar sesión", size=12),
-                    ], spacing=5),
-                    on_click=cerrar_sesion,
+                    content=ft.Text("Cerrar sesión", size=12),
+                    on_click=confirmar_cerrar_sesion,
                 )
             ], spacing=10)
         ], alignment="spaceBetween"),
@@ -57,46 +79,103 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.GREY_200)
     )
 
-    # Saludo de bienvenida en la página principal
     saludo = ft.Text(
-        f"¡Hola {usuario_data['nombre']}!",
+        f"{obtener_saludo()}, {usuario_data['nombre']}!",
         size=28,
         weight=ft.FontWeight.BOLD,
         color=ft.Colors.BLUE_800
     )
-    
+
     subtitulo = ft.Text(
         "Selecciona un módulo para comenzar",
         size=14,
         color=ft.Colors.GREY_600
     )
 
-    def modulo_card(titulo, descripcion, color):
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Container(
-                        width=50,
-                        height=50,
-                        bgcolor=color,
-                        border_radius=25,
-                    ),
-                    ft.Text(titulo, size=18, weight="bold"),
-                    ft.Text(descripcion, size=12, color="grey", text_align=ft.TextAlign.CENTER),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15),
-                padding=30,
-                width=280,
-                height=220,
-                bgcolor="white",
-                border_radius=15
-            ),
-            elevation=5,
+    # --- Card con ícono e interacción ---
+    def modulo_card(titulo, descripcion, icono_path, color_fondo, on_click):
+        card_content = ft.Container(
+            content=ft.Column([
+                ft.Image(
+                    src=icono_path,
+                    width=52,
+                    height=52,
+                    fit="contain",
+                ),
+                ft.Text(titulo, size=18, weight="bold"),
+                ft.Text(
+                    descripcion,
+                    size=12,
+                    color="grey",
+                    text_align=ft.TextAlign.CENTER
+                ),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15),
+            padding=30,
+            width=280,
+            height=220,
+            bgcolor="white",
+            border_radius=15,
         )
 
+        return ft.GestureDetector(
+            content=ft.Card(
+                content=card_content,
+                elevation=5,
+            ),
+            on_tap=on_click,
+            mouse_cursor=ft.MouseCursor.CLICK,
+        )
+
+    # --- Acciones de cada módulo (por ahora muestran un snackbar) ---
+    def abrir_gestion(_):
+        page.snack_bar = ft.SnackBar(ft.Text("Abriendo gestión de datos..."))
+        page.snack_bar.open = True
+        page.update()
+
+    def abrir_graficos(_):
+        page.snack_bar = ft.SnackBar(ft.Text("Abriendo generador de gráficos..."))
+        page.snack_bar.open = True
+        page.update()
+
+    def abrir_reportes(_):
+        page.snack_bar = ft.SnackBar(ft.Text("Abriendo reportes..."))
+        page.snack_bar.open = True
+        page.update()
+
+    def abrir_mapas(_):
+        page.snack_bar = ft.SnackBar(ft.Text("Abriendo mapas..."))
+        page.snack_bar.open = True
+        page.update()
+
     cards = ft.Row([
-        modulo_card("Gestión de datos", "Filtra por sector y alcance", ft.Colors.BLUE_100),
-        modulo_card("Generar gráficos", "Visualizaciones con matplotlib", ft.Colors.GREEN_100),
-        modulo_card("Reportes", "Exportar a Excel", ft.Colors.ORANGE_100),
+        modulo_card(
+            "Gestión de datos",
+            "Filtra por sector y alcance",
+            "analisis/assets/datos.ico",
+            ft.Colors.BLUE_100,
+            abrir_gestion
+        ),
+        modulo_card(
+            "Generar gráficos",
+            "Visualizaciones con matplotlib",
+            "analisis/assets/grafico.ico",
+            ft.Colors.GREEN_100,
+            abrir_graficos
+        ),
+        modulo_card(
+            "Reportes",
+            "Exportar a Excel",
+            "analisis/assets/reporte.ico",
+            ft.Colors.ORANGE_100,
+            abrir_reportes
+        ),
+        modulo_card(
+            "Mapas",
+            "Visualización geográfica",
+            "analisis/assets/mapa.ico",
+            ft.Colors.RED_100,
+            abrir_mapas
+        ),
     ], alignment=ft.MainAxisAlignment.CENTER, spacing=30, wrap=True)
 
     contenido_principal = ft.Column([
@@ -120,20 +199,18 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
     page.update()
 
 
+def mostrar_bienvenida(page: ft.Page, usuario_data: dict, on_cerrar_sesion=None):
+    mostrar_sistema_principal(page, usuario_data, on_cerrar_sesion)
+
+
 def iniciar_sesion(page: ft.Page, usuario_data: dict = None):
-    """Inicia la aplicación mostrando directamente el sistema principal"""
-    
     if usuario_data is None:
         usuario_data = {
             'id': '00000000-0000-0000-0000-000000000000',
-            'username': 'usuario_prueba',
-            'nombre': 'Usuario De Prueba'
+            'username': 'PabloM',
+            'nombre': 'Pablo Munguía'
         }
-    
-    def al_cerrar_sesion():
-        iniciar_sesion(page, None)
-    
-    mostrar_sistema_principal(page, usuario_data, al_cerrar_sesion)
+    mostrar_sistema_principal(page, usuario_data)
 
 
 if __name__ == "__main__":
