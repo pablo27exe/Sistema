@@ -715,4 +715,3 @@ def main(page: ft.Page):
     mostrar_login()
 
 ft.app(target=main, assets_dir="auth/assets") 
-

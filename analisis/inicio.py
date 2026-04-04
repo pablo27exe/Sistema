@@ -19,6 +19,32 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
     page.bgcolor = "#f5f5f5"
     page.padding = 0
 
+    def cerrar_dialogo(dialog):
+        """Cierra un diálogo correctamente"""
+        if dialog:
+            dialog.open = False
+            page.update()
+
+    def crear_dialogo(titulo, mensaje, tipo="info"):
+        """Crea un diálogo estandarizado como en tu ejemplo"""
+        colores = {
+            "error": ft.Colors.RED,
+            "exito": ft.Colors.GREEN,
+            "info": ft.Colors.BLUE
+        }
+        dialog = ft.AlertDialog(
+            title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)),
+            content=ft.Text(mensaje),
+            actions=[
+                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.overlay.append(dialog)  # ← Clave: usar overlay en lugar de page.dialog
+        dialog.open = True
+        page.update()
+        return dialog
+
     def confirmar_cerrar_sesion(_):
         def on_confirmar(e):
             dialog.open = False
@@ -44,7 +70,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.dialog = dialog
+        page.overlay.append(dialog)  # ← Usar overlay
         dialog.open = True
         page.update()
 
@@ -92,9 +118,38 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         color=ft.Colors.GREY_600
     )
 
+    # --- Funciones para abrir cada módulo con diálogo ---
+    def abrir_gestion(e):
+        crear_dialogo(
+            "Gestión de Datos", 
+            "Módulo de gestión de datos - Funcionalidad en desarrollo",
+            "info"
+        )
+
+    def abrir_graficos(e):
+        crear_dialogo(
+            "Generar Gráficos", 
+            "Módulo de generación de gráficos - Funcionalidad en desarrollo",
+            "info"
+        )
+
+    def abrir_reportes(e):
+        crear_dialogo(
+            "Reportes", 
+            "Módulo de reportes - Funcionalidad en desarrollo",
+            "info"
+        )
+
+    def abrir_mapas(e):
+        crear_dialogo(
+            "Mapas", 
+            "Módulo de mapas - Funcionalidad en desarrollo",
+            "info"
+        )
+
     # --- Card con ícono e interacción ---
     def modulo_card(titulo, descripcion, icono_path, color_fondo, on_click):
-        card_content = ft.Container(
+        return ft.Container(
             content=ft.Column([
                 ft.Image(
                     src=icono_path,
@@ -115,37 +170,9 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             height=220,
             bgcolor="white",
             border_radius=15,
+            on_click=on_click,
+            ink=True,
         )
-
-        return ft.GestureDetector(
-            content=ft.Card(
-                content=card_content,
-                elevation=5,
-            ),
-            on_tap=on_click,
-            mouse_cursor=ft.MouseCursor.CLICK,
-        )
-
-    # --- Acciones de cada módulo (por ahora muestran un snackbar) ---
-    def abrir_gestion(_):
-        page.snack_bar = ft.SnackBar(ft.Text("Abriendo gestión de datos..."))
-        page.snack_bar.open = True
-        page.update()
-
-    def abrir_graficos(_):
-        page.snack_bar = ft.SnackBar(ft.Text("Abriendo generador de gráficos..."))
-        page.snack_bar.open = True
-        page.update()
-
-    def abrir_reportes(_):
-        page.snack_bar = ft.SnackBar(ft.Text("Abriendo reportes..."))
-        page.snack_bar.open = True
-        page.update()
-
-    def abrir_mapas(_):
-        page.snack_bar = ft.SnackBar(ft.Text("Abriendo mapas..."))
-        page.snack_bar.open = True
-        page.update()
 
     cards = ft.Row([
         modulo_card(
