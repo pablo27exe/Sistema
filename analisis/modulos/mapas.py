@@ -96,7 +96,7 @@ class ModuloMapas:
         self.columna_activa = None
         self.tema_activo    = None
         self.titulo_activo  = "Selecciona un indicador"
-        self.nivel_actual   = None  # None = nada seleccionado
+        self.nivel_actual   = None
         self.estado_seleccionado = None
 
         # Referencias a widgets
@@ -116,6 +116,17 @@ class ModuloMapas:
         self._estados_abierto = False
         self.nivel_texto = ft.Text("Seleccionar nivel", size=13, color=ft.Colors.BLUE_800)
         self.estado_texto = ft.Text("Seleccionar estado", size=12, color=ft.Colors.GREY_700)
+        
+    def _limpiar_temporales(self):
+        """Elimina todas las imágenes temporales al iniciar el módulo"""
+        directorio = os.path.dirname(__file__)
+        for archivo in os.listdir(directorio):
+            if archivo.startswith("_mapa_temp_") and archivo.endswith(".png"):
+                try:
+                    os.remove(os.path.join(directorio, archivo))
+                    print(f"🗑️ Eliminado temporal: {archivo}")
+                except Exception as e:
+                    print(f"⚠️ No se pudo eliminar {archivo}: {e}")
         
     def _log_seleccion(self):
         """Muestra en consola el estado actual de la selección"""
@@ -167,13 +178,10 @@ class ModuloMapas:
             daemon=True
         ).start()
 
-    # ── Generación del mapa ─────────────────────────────────────────────────
+    # ── Métodos auxiliares que devuelven la figura (para guardar) ───────────
 
-    def _df_para_tema(self, tema: str):
-        return self.dfs.get(tema)
-
-    def generar_mapa_nacional(self, columna: str, tema: str):
-        print(f"\n🗺️ Generando mapa NACIONAL - Columna: {columna}, Tema: {tema}")
+    def _generar_figura_nacional(self, columna: str, tema: str):
+        """Genera y retorna la figura del mapa nacional (no guarda archivo)"""
         df = self._df_para_tema(tema)
         if df is None or columna not in df.columns:
             print(f"❌ Error: Columna '{columna}' no encontrada en tema '{tema}'")
@@ -185,11 +193,9 @@ class ModuloMapas:
         df_agg = df.groupby("clave_estado")[columna].sum().reset_index()
         gdf = self.gdf_estados.merge(df_agg, left_on="CVEGEO", right_on="clave_estado", how="left")
 
-        # Crear figura con tamaño más grande
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_axis_off()
-
-        # Formateador para números con separadores de miles
+        
         from matplotlib.ticker import FuncFormatter
         def formato_miles(x, p):
             if x >= 1_000_000:
@@ -198,91 +204,36 @@ class ModuloMapas:
                 return f'{x/1_000:.0f}k'
             else:
                 return f'{x:,.0f}'
-
-        # Crear mapa con mejor escala de colores
-        import numpy as np
+        
         vmin = gdf[columna].min()
         vmax = gdf[columna].max()
 
-        # Usar más colores para mejor contraste
         gdf.plot(
             column=columna, 
-            cmap='RdYlGn_r',  # Rojo para valores altos, verde para bajos (contraste)
+            cmap='RdYlGn_r',
             legend=True,
             legend_kwds={
                 "label": self.titulo_activo,
                 "shrink": 0.6,
                 "pad": 0.02,
                 "orientation": "horizontal",
-                "format": FuncFormatter(formato_miles),
-                "fraction": 0.05,
-                "aspect": 40
+                "format": FuncFormatter(formato_miles)
             },
-            ax=ax, 
-            edgecolor='black',  # Bordes negros para mejor contraste
-            linewidth=0.3, 
-            missing_kwds={"color": "lightgray", "label": "Sin datos"},
+            ax=ax,
+            edgecolor='black',
+            linewidth=0.3,
+            missing_kwds={"color": "lightgray"},
             vmin=vmin,
             vmax=vmax
         )
-
-        # Agregar etiquetas con los valores en cada estado
-        for idx, row in gdf.iterrows():
-            if pd.notna(row[columna]) and row[columna] > 0:
-                # Obtener el centroide del polígono para colocar la etiqueta
-                centroid = row.geometry.centroid
-                x, y = centroid.x, centroid.y
-                
-                # Formatear el valor
-                valor = row[columna]
-                if valor >= 1_000_000:
-                    texto = f'{valor/1_000_000:.1f}M'
-                elif valor >= 1_000:
-                    texto = f'{valor/1_000:.0f}k'
-                else:
-                    texto = f'{valor:,.0f}'
-                
-                # Añadir texto con fondo blanco semitransparente para legibilidad
-                ax.text(
-                    x, y, texto,
-                    fontsize=7,
-                    ha='center',
-                    va='center',
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7),
-                    weight='bold'
-                )
-
-        # Título más descriptivo
-        ax.set_title(
-            f"{self.titulo_activo} por Estado", 
-            fontsize=16, 
-            fontweight="bold", 
-            pad=20
-        )
-
-        # Agregar anotación de fuente
-        ax.text(
-            0.02, 0.02, 
-            "Fuente: INEGI, Censo de Población y Vivienda 2020",
-            transform=ax.transAxes,
-            fontsize=8,
-            alpha=0.7,
-            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.5)
-        )
-
+        
+        ax.set_title(f"{self.titulo_activo} por Estado - México", fontsize=16, fontweight="bold", pad=20)
         plt.tight_layout()
+        return fig
 
-        # Nombre único con timestamp
-        timestamp = int(time.time() * 1000)
-        temp = os.path.join(os.path.dirname(__file__), f"_mapa_temp_{timestamp}.png")
-        fig.savefig(temp, format="png", dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        print(f"✅ Mapa nacional guardado temporalmente en: {temp}")
-        return temp
-
-    def generar_mapa_estatal(self, columna: str, tema: str, estado_clave: str):
+    def _generar_figura_estatal(self, columna: str, tema: str, estado_clave: str):
+        """Genera y retorna la figura del mapa estatal (no guarda archivo)"""
         nombre_estado = NOMBRES_ESTADOS.get(estado_clave, estado_clave)
-        print(f"\n🗺️ Generando mapa ESTATAL - Estado: {nombre_estado} ({estado_clave}), Columna: {columna}")
         
         df = self._df_para_tema(tema)
         if df is None or columna not in df.columns:
@@ -292,45 +243,25 @@ class ModuloMapas:
             print("❌ Error: No hay shapefile de municipios")
             return None
 
-        # Filtrar datos del estado
         df_estado = df[df["clave_estado"] == estado_clave].copy()
-        
-        # ELIMINAR COLUMNAS DUPLICADAS
-        # Si hay columnas duplicadas, mantener solo la primera
         df_estado = df_estado.loc[:, ~df_estado.columns.duplicated()]
         
-        # Verificar que 'clave_municipio' existe y es una Series
         if 'clave_municipio' not in df_estado.columns:
             print("❌ Error: 'clave_municipio' no es una columna")
             return None
         
-        # Asegurar que clave_municipio sea string
         df_estado['clave_municipio'] = df_estado['clave_municipio'].astype(str).str.zfill(5)
-        
-        # Agrupar por municipio
         df_estado = df_estado.groupby('clave_municipio')[columna].sum().reset_index()
         
-        print(f"  Después de agrupar - {len(df_estado)} municipios")
-        
-        # Filtrar municipios del estado del shapefile
         gdf_mun_estado = self.gdf_municipios[self.gdf_municipios["CVEGEO"].str.startswith(estado_clave)].copy()
-
+        
         if df_estado.empty or gdf_mun_estado.empty:
             print(f"❌ Error: No hay datos para el estado {nombre_estado}")
             return None
 
-        # Asegurar que las claves del shapefile sean strings de 5 dígitos
         gdf_mun_estado["CVEGEO"] = gdf_mun_estado["CVEGEO"].astype(str).str.zfill(5)
+        gdf = gdf_mun_estado.merge(df_estado, left_on="CVEGEO", right_on="clave_municipio", how="left")
 
-        # Unir datos
-        gdf = gdf_mun_estado.merge(
-            df_estado,
-            left_on="CVEGEO",
-            right_on="clave_municipio",
-            how="left"
-        )
-
-        # Crear figura
         fig, ax = plt.subplots(figsize=(14, 10))
         ax.set_axis_off()
         
@@ -344,8 +275,8 @@ class ModuloMapas:
                 return f'{x:,.0f}'
         
         gdf.plot(
-            column=columna, 
-            cmap="YlOrRd", 
+            column=columna,
+            cmap="YlOrRd",
             legend=True,
             legend_kwds={
                 "label": self.titulo_activo,
@@ -354,16 +285,43 @@ class ModuloMapas:
                 "orientation": "horizontal",
                 "format": FuncFormatter(formato_miles)
             },
-            ax=ax, 
-            edgecolor="white", 
-            linewidth=0.3, 
+            ax=ax,
+            edgecolor="white",
+            linewidth=0.3,
             missing_kwds={"color": "lightgray"}
         )
         
         ax.set_title(f"{self.titulo_activo} por Municipio - {nombre_estado}", fontsize=14, fontweight="bold", pad=14)
         plt.tight_layout()
+        return fig
 
-        # Nombre único con timestamp
+    def _df_para_tema(self, tema: str):
+        return self.dfs.get(tema)
+
+    def generar_mapa_nacional(self, columna: str, tema: str):
+        """Genera mapa nacional y guarda archivo temporal PNG"""
+        print(f"\n🗺️ Generando mapa NACIONAL - Columna: {columna}, Tema: {tema}")
+        
+        fig = self._generar_figura_nacional(columna, tema)
+        if fig is None:
+            return None
+        
+        timestamp = int(time.time() * 1000)
+        temp = os.path.join(os.path.dirname(__file__), f"_mapa_temp_{timestamp}.png")
+        fig.savefig(temp, format="png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"✅ Mapa nacional guardado temporalmente en: {temp}")
+        return temp
+
+    def generar_mapa_estatal(self, columna: str, tema: str, estado_clave: str):
+        """Genera mapa estatal y guarda archivo temporal PNG"""
+        nombre_estado = NOMBRES_ESTADOS.get(estado_clave, estado_clave)
+        print(f"\n🗺️ Generando mapa ESTATAL - Estado: {nombre_estado} ({estado_clave}), Columna: {columna}")
+        
+        fig = self._generar_figura_estatal(columna, tema, estado_clave)
+        if fig is None:
+            return None
+        
         timestamp = int(time.time() * 1000)
         temp = os.path.join(os.path.dirname(__file__), f"_mapa_temp_{timestamp}.png")
         fig.savefig(temp, format="png", dpi=130, bbox_inches="tight")
@@ -399,7 +357,6 @@ class ModuloMapas:
     def _build_sidebar(self) -> ft.Column:
         items = []
 
-        # ── 1. Temas (Población, Salud, Economía) ──
         for tema, tipos in SIDEBAR_TEMAS.items():
             tema_abierto = self._tema_abierto == tema
 
@@ -489,7 +446,6 @@ class ModuloMapas:
                             print(f"\n🎯 Click en indicador: {self._label(c)}")
                             self.columna_activa = c
                             
-                            # Corregir el tema
                             tema_corregido = "poblacion" if tm == "población" else "salud" if tm == "salud" else "economicas"
                             tipo_corregido = "abs" if tp == "absoluto" else "rel"
                             
@@ -515,15 +471,10 @@ class ModuloMapas:
                             )
                         )
 
-        # ── 2. Separador ──
         items.append(ft.Divider(height=1, color=ft.Colors.GREY_300))
         
-        # ── 3. Título Nivel ──
-        items.append(
-            ft.Text("Nivel", size=13, weight="bold", color=ft.Colors.GREY_600)
-        )
+        items.append(ft.Text("Nivel", size=13, weight="bold", color=ft.Colors.GREY_600))
         
-        # ── 4. Opción Nacional ──
         def on_nacional(e):
             print("\n🇲🇽 Seleccionado: Nacional")
             self.nivel_actual = "nacional"
@@ -545,7 +496,6 @@ class ModuloMapas:
             )
         )
         
-        # ── 5. Opción Estatal (con despliegue de estados) ──
         def on_estatal(e):
             print("\n📍 Seleccionado: Estatal")
             self.nivel_actual = "estatal"
@@ -569,7 +519,6 @@ class ModuloMapas:
             )
         )
         
-        # ── 6. Lista de estados (solo si estatal está abierto) ──
         if self.nivel_actual == "estatal" and self._estados_abierto:
             for clave, nombre in NOMBRES_ESTADOS.items():
                 def on_estado(e, c=clave, n=nombre):
@@ -596,12 +545,33 @@ class ModuloMapas:
             self.page.update()
 
     # ── Generar y mostrar ───────────────────────────────────────────────────
-
     def _generar_y_mostrar(self):
         print("\n" + "="*50)
         print("🔘 Click en 'Generar mapa'")
-        self._log_seleccion()
         
+        # Verificar si los datos están cargados
+        if self.dfs.get("poblacion_abs") is None:
+            print("❌ Datos aún no cargados. Espera un momento...")
+            
+            def cerrar_dialogo(dialog):
+                dialog.open = False
+                self.page.update()
+            
+            dialog = ft.AlertDialog(
+                title=ft.Text("⏳ Cargando datos"),
+                content=ft.Text("Los datos aún se están cargando.\nPor favor espera un momento y vuelve a intentar."),
+                actions=[
+                    ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+            self.page.overlay.append(dialog)
+            dialog.open = True
+            self.page.update()
+            return
+        
+        self._log_seleccion()
+            
         if self.columna_activa is None or self.tema_activo is None:
             print("❌ No hay tema seleccionado. Por favor selecciona un indicador.")
             if self.placeholder_ref.current:
@@ -661,9 +631,10 @@ class ModuloMapas:
                         self.placeholder_ref.current.visible = True
                 self.page.update()
 
-            self.page.run_thread(_actualizar)  # ← ESTA LÍNEA FALTABA
+            self.page.run_thread(_actualizar)
 
         threading.Thread(target=_trabajo, daemon=True).start()
+    
 
     # ── Guardar ─────────────────────────────────────────────────────────────
 
@@ -677,28 +648,22 @@ class ModuloMapas:
         if self.nivel_actual == "estatal" and self.estado_seleccionado is None:
             print("❌ No se puede guardar: No hay estado seleccionado")
             return
-            
-        df = self._df_para_tema(self.tema_activo)
-        if df is None or self.columna_activa not in df.columns:
-            print(f"❌ Error: Columna '{self.columna_activa}' no encontrada")
-            return
-        if "clave_estado" not in df.columns:
-            print("❌ Error: Falta columna 'clave_estado'")
-            return
 
         from datetime import datetime
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nombre = f"mapa_{self.columna_activa}_{ts}.{formato.lower()}"
-        directorio = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "exportaciones")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        nombre_limpio = self.titulo_activo.replace(" ", "_").replace("/", "_")
+        nombre = f"mapa_{nombre_limpio}_{timestamp}.{formato.lower()}"
+        
+        directorio = "C:/Mapas_SCINCE"
         os.makedirs(directorio, exist_ok=True)
         destino = os.path.join(directorio, nombre)
 
         print(f"\n💾 Guardando mapa en: {destino}")
         
         if self.nivel_actual == "nacional":
-            fig = self.generar_mapa_nacional(self.columna_activa, self.tema_activo)
+            fig = self._generar_figura_nacional(self.columna_activa, self.tema_activo)
         else:
-            fig = self.generar_mapa_estatal(self.columna_activa, self.tema_activo, self.estado_seleccionado)
+            fig = self._generar_figura_estatal(self.columna_activa, self.tema_activo, self.estado_seleccionado)
 
         if fig is None:
             print("❌ Error: No se pudo generar el mapa para guardar")
@@ -707,7 +672,26 @@ class ModuloMapas:
         dpi = 200 if formato in ("PNG", "JPG") else 150
         fig.savefig(destino, format=formato.lower(), dpi=dpi, bbox_inches="tight")
         plt.close(fig)
-        print(f"✅ Mapa guardado exitosamente: {destino}")
+        
+        print(f"✅ Mapa guardado exitosamente en: {destino}")
+        
+        def mostrar_mensaje():
+            dialog = ft.AlertDialog(
+                title=ft.Text("✅ Mapa guardado"),
+                content=ft.Text(f"Archivo guardado en:\n{destino}"),
+                actions=[
+                    ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
+                ],
+            )
+            self.page.overlay.append(dialog)
+            dialog.open = True
+            self.page.update()
+
+        def cerrar_dialogo(dialog):
+            dialog.open = False
+            self.page.update()
+        
+        self.page.run_thread(mostrar_mensaje)
 
     def _dialogo_guardar(self, _):
         if self.columna_activa is None or self.tema_activo is None:
@@ -753,6 +737,7 @@ class ModuloMapas:
     # ── Build ────────────────────────────────────────────────────────────────
 
     def build(self):
+        self._limpiar_temporales()
         self.page.clean()
         self.page.title = "SCINCE – Mapas"
         self.page.bgcolor = "#f5f5f5"
@@ -765,7 +750,6 @@ class ModuloMapas:
             from inicio import mostrar_sistema_principal
             mostrar_sistema_principal(self.page, self.usuario_data)
 
-        # ── Topbar ──
         topbar = ft.Container(
             content=ft.Row([
                 ft.Row([
@@ -780,7 +764,6 @@ class ModuloMapas:
             shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.GREY_200),
         )
 
-        # ── Sidebar ──
         sidebar = ft.Container(
             content=ft.Column([
                 ft.Text("Indicadores", size=13, weight="bold", color=ft.Colors.GREY_600),
@@ -815,7 +798,6 @@ class ModuloMapas:
             shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.GREY_200),
         )
 
-        # ── Área del mapa (ocupa TODO el espacio) ──
         area_mapa = ft.Container(
             content=ft.Stack([
                 ft.Image(ref=self.img_ref, src=None, fit="contain", expand=True, visible=False),
@@ -862,7 +844,6 @@ class ModuloMapas:
             color=ft.Colors.BLUE_900,
         )
 
-        # Layout principal
         contenido_columna = ft.Column(
             [ft.Row([titulo_mapa], alignment=ft.MainAxisAlignment.CENTER), area_mapa],
             expand=True,
@@ -880,7 +861,6 @@ class ModuloMapas:
         self.page.add(pagina_principal)
         self.page.update()
 
-        # Carga de datos en segundo plano
         def _on_datos_listos(exito):
             if not exito:
                 print("❌ No se encontraron algunos archivos de datos")
@@ -890,8 +870,6 @@ class ModuloMapas:
 
         self.cargar_datos_async(_on_datos_listos)
 
-
-# ── Punto de entrada ────────────────────────────────────────────────────────
 
 def abrir_modulo_mapas(page: ft.Page, usuario_data: dict):
     ModuloMapas(page, usuario_data).build()
