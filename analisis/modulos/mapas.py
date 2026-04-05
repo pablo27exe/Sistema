@@ -276,7 +276,7 @@ class ModuloMapas:
         
         gdf.plot(
             column=columna,
-            cmap="YlOrRd",
+            cmap="RdYlGn_r",
             legend=True,
             legend_kwds={
                 "label": self.titulo_activo,
