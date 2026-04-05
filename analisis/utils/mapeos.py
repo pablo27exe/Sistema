@@ -391,10 +391,18 @@ MAPEO_SALUD_REL = {
 }
 
 # ── Salud — valores absolutos ───────────────────────────────────────────────
-# El SCINCE publica salud principalmente como porcentajes.
-# SaludABS usa las mismas claves _R; se carga con MAPEO_SALUD_REL.
-MAPEO_SALUD_ABS = MAPEO_SALUD_REL
-
+MAPEO_SALUD_ABS = {
+    "SALUD1":  "poblacion_afiliada_servicios_salud",
+    "SALUD2":  "poblacion_sin_afiliacion",
+    "SALUD3":  "poblacion_afiliacion_imss",
+    "SALUD10": "poblacion_afiliacion_imss_bienestar",
+    "SALUD4":  "poblacion_afiliacion_issste",
+    "SALUD9":  "poblacion_afiliacion_issste_estatal",
+    "SALUD5":  "poblacion_afiliacion_insabi",
+    "SALUD6":  "poblacion_afiliacion_pemex_defensa_marina",
+    "SALUD7":  "poblacion_afiliacion_privada",
+    "SALUD8":  "poblacion_afiliacion_otra",
+}
 
 # ── Función de normalización ────────────────────────────────────────────────
 

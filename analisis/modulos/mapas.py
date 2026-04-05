@@ -59,6 +59,20 @@ GRUPOS_ECONOMICAS_REL = {
     "No PEA %":      [v for v in MAPEO_ECONOMICAS_REL.values() if "no_pea" in v],
 }
 
+GRUPOS_SALUD_ABS = {
+    "Afiliación": ["poblacion_afiliada_servicios_salud", "poblacion_sin_afiliacion"],
+    "Por institución": [
+        "poblacion_afiliacion_imss",
+        "poblacion_afiliacion_imss_bienestar",
+        "poblacion_afiliacion_issste",
+        "poblacion_afiliacion_issste_estatal",
+        "poblacion_afiliacion_insabi",
+        "poblacion_afiliacion_pemex_defensa_marina",
+        "poblacion_afiliacion_privada",
+        "poblacion_afiliacion_otra",
+    ],
+}
+
 GRUPOS_SALUD_REL = {
     "Afiliación": list(MAPEO_SALUD_REL.values()),
 }
@@ -69,6 +83,7 @@ SIDEBAR_TEMAS = {
         "Relativo": GRUPOS_POBLACION_REL,
     },
     "Salud": {
+        "Absoluto": GRUPOS_SALUD_ABS,
         "Relativo": GRUPOS_SALUD_REL,
     },
     "Economía": {

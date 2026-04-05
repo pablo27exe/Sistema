@@ -26,7 +26,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             page.update()
 
     def crear_dialogo(titulo, mensaje, tipo="info"):
-        """Crea un diálogo estandarizado como en tu ejemplo"""
+        """Crea un diálogo estandarizado"""
         colores = {
             "error": ft.Colors.RED,
             "exito": ft.Colors.GREEN,
@@ -40,7 +40,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.overlay.append(dialog)  # ← Clave: usar overlay en lugar de page.dialog
+        page.overlay.append(dialog)
         dialog.open = True
         page.update()
         return dialog
@@ -70,7 +70,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.overlay.append(dialog)  # ← Usar overlay
+        page.overlay.append(dialog)
         dialog.open = True
         page.update()
 

@@ -93,16 +93,18 @@ def cargar_csv_economicas(tipo: str = "abs") -> pd.DataFrame | None:
 
 def cargar_csv_salud(tipo: str = "abs") -> pd.DataFrame | None:
     """
-    tipo: "abs" → SaludABS.csv   |   "rel" → SaludREL.csv
-
-    Nota: el SCINCE solo publica porcentajes para salud (REL),
-    SaludABS existe pero contiene las mismas columnas _R.
-    Se carga con MAPEO_SALUD_REL en ambos casos.
+    tipo: "abs" → SaludABS.csv (valores absolutos)
+          "rel" → SaludREL.csv (porcentajes)
     """
-    from utils.mapeos import MAPEO_SALUD_REL, COLUMNAS_GEOGRAFICAS
+    from utils.mapeos import MAPEO_SALUD_ABS, MAPEO_SALUD_REL, COLUMNAS_GEOGRAFICAS
 
-    archivo = "SaludABS.csv" if tipo == "abs" else "SaludREL.csv"
-    mapeo   = {**COLUMNAS_GEOGRAFICAS, **MAPEO_SALUD_REL}
+    if tipo == "abs":
+        archivo = "SaludABS.csv"
+        mapeo = {**COLUMNAS_GEOGRAFICAS, **MAPEO_SALUD_ABS}
+    else:
+        archivo = "SaludREL.csv"
+        mapeo = {**COLUMNAS_GEOGRAFICAS, **MAPEO_SALUD_REL}
+    
     return _leer_csv(archivo, mapeo)
 
 
