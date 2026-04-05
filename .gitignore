@@ -4,3 +4,12 @@
 *.pub
 facial_data/
 __pycache__/
+
+# Datos y shapefiles (no subir a Git)
+analisis/datos/
+analisis/shapefiles/
+
+# Archivos temporales de mapas
+temp_mapa.png
+*.png
+temp_*.png

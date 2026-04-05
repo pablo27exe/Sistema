@@ -140,12 +140,11 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             "info"
         )
 
+    # En inicio.py, modificar la función abrir_mapas:
+
     def abrir_mapas(e):
-        crear_dialogo(
-            "Mapas", 
-            "Módulo de mapas - Funcionalidad en desarrollo",
-            "info"
-        )
+        from modulos.mapas import abrir_modulo_mapas
+        abrir_modulo_mapas(page, usuario_data)
 
     # --- Card con ícono e interacción ---
     def modulo_card(titulo, descripcion, icono_path, color_fondo, on_click):
@@ -191,7 +190,7 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         ),
         modulo_card(
             "Reportes",
-            "Exportar a Excel",
+            "Exportar a Excel y PDF",
             "analisis/assets/reporte.ico",
             ft.Colors.ORANGE_100,
             abrir_reportes
