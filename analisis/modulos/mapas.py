@@ -124,15 +124,15 @@ class ModuloMapas:
             if archivo.startswith("_mapa_temp_") and archivo.endswith(".png"):
                 try:
                     os.remove(os.path.join(directorio, archivo))
-                    print(f"🗑️ Eliminado temporal: {archivo}")
+                    #print(f"Eliminado temporal: {archivo}")
                 except Exception as e:
-                    print(f"⚠️ No se pudo eliminar {archivo}: {e}")
+                    print(f"No se pudo eliminar {archivo}: {e}")
         
     def _log_seleccion(self):
         """Muestra en consola el estado actual de la selección"""
         estado_nombre = NOMBRES_ESTADOS.get(self.estado_seleccionado, 'Ninguno') if self.estado_seleccionado else 'Ninguno'
         print(f"\n{'='*50}")
-        print(f"📊 ESTADO ACTUAL DE SELECCIÓN:")
+        print(f"ESTADO ACTUAL DE SELECCIÓN:")
         print(f"   Tema: {self.tema_activo}")
         print(f"   Columna: {self.columna_activa}")
         print(f"   Título: {self.titulo_activo}")
@@ -144,11 +144,11 @@ class ModuloMapas:
 
     def _cargar_datos_thread(self, on_done):
         try:
-            print("\n📂 Cargando shapefiles...")
+            #print("\nCargando shapefiles...")
             self.gdf_estados    = cargar_shapefile_estados()
             self.gdf_municipios = cargar_shapefile_municipios()
 
-            print("\n📂 Cargando CSVs...")
+            #print("\nCargando CSVs...")
             self.dfs["poblacion_abs"]  = cargar_csv_poblacion("abs")
             self.dfs["poblacion_rel"]  = cargar_csv_poblacion("rel")
             self.dfs["economicas_abs"] = cargar_csv_economicas("abs")
@@ -162,12 +162,12 @@ class ModuloMapas:
             ])
             
             if exito:
-                print("\n✅ Todos los datos cargados correctamente")
+                print("\nTodos los datos cargados correctamente")
             else:
-                print("\n⚠️ Algunos datos no se cargaron correctamente")
+                print("\nAlgunos datos no se cargaron correctamente")
                 
         except Exception as e:
-            print(f"❌ Error cargando datos: {e}")
+            print(f"Error cargando datos: {e}")
             exito = False
         on_done(exito)
 
@@ -184,10 +184,10 @@ class ModuloMapas:
         """Genera y retorna la figura del mapa nacional (no guarda archivo)"""
         df = self._df_para_tema(tema)
         if df is None or columna not in df.columns:
-            print(f"❌ Error: Columna '{columna}' no encontrada en tema '{tema}'")
+            print(f"Error: Columna '{columna}' no encontrada en tema '{tema}'")
             return None
         if "clave_estado" not in df.columns:
-            print("❌ Error: Falta columna 'clave_estado'")
+            print("Error: Falta columna 'clave_estado'")
             return None
 
         df_agg = df.groupby("clave_estado")[columna].sum().reset_index()
@@ -227,7 +227,7 @@ class ModuloMapas:
             vmax=vmax
         )
         
-        ax.set_title(f"{self.titulo_activo} por Estado - México", fontsize=16, fontweight="bold", pad=20)
+        ax.set_title(f"{self.titulo_activo} por Estado", fontsize=16, fontweight="bold", pad=20)
         plt.tight_layout()
         return fig
 
@@ -237,17 +237,17 @@ class ModuloMapas:
         
         df = self._df_para_tema(tema)
         if df is None or columna not in df.columns:
-            print(f"❌ Error: Columna '{columna}' no encontrada en tema '{tema}'")
+            print(f"Error: Columna '{columna}' no encontrada en tema '{tema}'")
             return None
         if self.gdf_municipios is None:
-            print("❌ Error: No hay shapefile de municipios")
+            print("Error: No hay shapefile de municipios")
             return None
 
         df_estado = df[df["clave_estado"] == estado_clave].copy()
         df_estado = df_estado.loc[:, ~df_estado.columns.duplicated()]
         
         if 'clave_municipio' not in df_estado.columns:
-            print("❌ Error: 'clave_municipio' no es una columna")
+            print("Error: 'clave_municipio' no es una columna")
             return None
         
         df_estado['clave_municipio'] = df_estado['clave_municipio'].astype(str).str.zfill(5)
@@ -256,7 +256,7 @@ class ModuloMapas:
         gdf_mun_estado = self.gdf_municipios[self.gdf_municipios["CVEGEO"].str.startswith(estado_clave)].copy()
         
         if df_estado.empty or gdf_mun_estado.empty:
-            print(f"❌ Error: No hay datos para el estado {nombre_estado}")
+            print(f"Error: No hay datos para el estado {nombre_estado}")
             return None
 
         gdf_mun_estado["CVEGEO"] = gdf_mun_estado["CVEGEO"].astype(str).str.zfill(5)
@@ -300,7 +300,7 @@ class ModuloMapas:
 
     def generar_mapa_nacional(self, columna: str, tema: str):
         """Genera mapa nacional y guarda archivo temporal PNG"""
-        print(f"\n🗺️ Generando mapa NACIONAL - Columna: {columna}, Tema: {tema}")
+        #print(f"\nGenerando mapa NACIONAL - Columna: {columna}, Tema: {tema}")
         
         fig = self._generar_figura_nacional(columna, tema)
         if fig is None:
@@ -310,13 +310,13 @@ class ModuloMapas:
         temp = os.path.join(os.path.dirname(__file__), f"_mapa_temp_{timestamp}.png")
         fig.savefig(temp, format="png", dpi=150, bbox_inches="tight")
         plt.close(fig)
-        print(f"✅ Mapa nacional guardado temporalmente en: {temp}")
+        #print(f"Mapa nacional guardado temporalmente en: {temp}")
         return temp
 
     def generar_mapa_estatal(self, columna: str, tema: str, estado_clave: str):
         """Genera mapa estatal y guarda archivo temporal PNG"""
         nombre_estado = NOMBRES_ESTADOS.get(estado_clave, estado_clave)
-        print(f"\n🗺️ Generando mapa ESTATAL - Estado: {nombre_estado} ({estado_clave}), Columna: {columna}")
+        #print(f"\nGenerando mapa ESTATAL - Estado: {nombre_estado} ({estado_clave}), Columna: {columna}")
         
         fig = self._generar_figura_estatal(columna, tema, estado_clave)
         if fig is None:
@@ -326,22 +326,22 @@ class ModuloMapas:
         temp = os.path.join(os.path.dirname(__file__), f"_mapa_temp_{timestamp}.png")
         fig.savefig(temp, format="png", dpi=130, bbox_inches="tight")
         plt.close(fig)
-        print(f"✅ Mapa estatal guardado temporalmente en: {temp}")
+        #print(f"Mapa estatal guardado temporalmente en: {temp}")
         return temp
 
     def generar_mapa(self):
-        print("\n" + "="*50)
-        print("🎯 Intentando generar mapa...")
+        #print("\n" + "="*50)
+        #print("Intentando generar mapa...")
         self._log_seleccion()
         
         if self.columna_activa is None or self.tema_activo is None:
-            print("❌ No hay tema/columna seleccionada")
+            #print("No hay tema/columna seleccionada")
             return None
         if self.nivel_actual is None:
-            print("❌ No hay nivel seleccionado")
+            #print("No hay nivel seleccionado")
             return None
         if self.nivel_actual == "estatal" and self.estado_seleccionado is None:
-            print("❌ No hay estado seleccionado")
+            #print("No hay estado seleccionado")
             return None
             
         if self.nivel_actual == "nacional":
@@ -361,7 +361,7 @@ class ModuloMapas:
             tema_abierto = self._tema_abierto == tema
 
             def _on_tema(e, t=tema):
-                print(f"\n📁 Click en tema: {t}")
+                print(f"\nClick en tema: {t}")
                 self._tema_abierto = None if self._tema_abierto == t else t
                 self._tipo_abierto = None
                 self._grupo_abierto = None
@@ -389,7 +389,7 @@ class ModuloMapas:
                 tipo_abierto = self._tipo_abierto == tipo
 
                 def _on_tipo(e, tp=tipo):
-                    print(f"\n📂 Click en tipo: {tp}")
+                    print(f"\nClick en tipo: {tp}")
                     self._tipo_abierto = None if self._tipo_abierto == tp else tp
                     self._grupo_abierto = None
                     self._refrescar_sidebar()
@@ -418,7 +418,7 @@ class ModuloMapas:
                     grupo_abierto = self._grupo_abierto == grupo
 
                     def _on_grupo(e, g=grupo):
-                        print(f"\n📁 Click en grupo: {g}")
+                        print(f"\nClick en grupo: {g}")
                         self._grupo_abierto = None if self._grupo_abierto == g else g
                         self._refrescar_sidebar()
 
@@ -443,7 +443,7 @@ class ModuloMapas:
                         activa = col == self.columna_activa
 
                         def _on_col(e, c=col, tm=tema.lower(), tp=tipo.lower()):
-                            print(f"\n🎯 Click en indicador: {self._label(c)}")
+                            print(f"\nClick en indicador: {self._label(c)}")
                             self.columna_activa = c
                             
                             tema_corregido = "poblacion" if tm == "población" else "salud" if tm == "salud" else "economicas"
@@ -476,7 +476,7 @@ class ModuloMapas:
         items.append(ft.Text("Nivel", size=13, weight="bold", color=ft.Colors.GREY_600))
         
         def on_nacional(e):
-            print("\n🇲🇽 Seleccionado: Nacional")
+            print("\nSeleccionado: Nacional")
             self.nivel_actual = "nacional"
             self._estados_abierto = False
             self._refrescar_sidebar()
@@ -497,7 +497,7 @@ class ModuloMapas:
         )
         
         def on_estatal(e):
-            print("\n📍 Seleccionado: Estatal")
+            print("\nSeleccionado: Estatal")
             self.nivel_actual = "estatal"
             self._estados_abierto = not self._estados_abierto
             self._refrescar_sidebar()
@@ -522,7 +522,7 @@ class ModuloMapas:
         if self.nivel_actual == "estatal" and self._estados_abierto:
             for clave, nombre in NOMBRES_ESTADOS.items():
                 def on_estado(e, c=clave, n=nombre):
-                    print(f"\n🏛️ Estado seleccionado: {n}")
+                    print(f"\nEstado seleccionado: {n}")
                     self.estado_seleccionado = c
                     self._estados_abierto = False
                     self._refrescar_sidebar()
@@ -547,18 +547,18 @@ class ModuloMapas:
     # ── Generar y mostrar ───────────────────────────────────────────────────
     def _generar_y_mostrar(self):
         print("\n" + "="*50)
-        print("🔘 Click en 'Generar mapa'")
+        print("Click en 'Generar mapa'")
         
         # Verificar si los datos están cargados
         if self.dfs.get("poblacion_abs") is None:
-            print("❌ Datos aún no cargados. Espera un momento...")
+            print("Datos aún no cargados. Espera un momento...")
             
             def cerrar_dialogo(dialog):
                 dialog.open = False
                 self.page.update()
             
             dialog = ft.AlertDialog(
-                title=ft.Text("⏳ Cargando datos"),
+                title=ft.Text("Cargando datos"),
                 content=ft.Text("Los datos aún se están cargando.\nPor favor espera un momento y vuelve a intentar."),
                 actions=[
                     ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
@@ -573,7 +573,7 @@ class ModuloMapas:
         self._log_seleccion()
             
         if self.columna_activa is None or self.tema_activo is None:
-            print("❌ No hay tema seleccionado. Por favor selecciona un indicador.")
+            print("No hay tema seleccionado. Por favor selecciona un indicador.")
             if self.placeholder_ref.current:
                 self.placeholder_ref.current.visible = True
             if self.img_ref.current:
@@ -582,20 +582,20 @@ class ModuloMapas:
             return
             
         if self.nivel_actual is None:
-            print("❌ No hay nivel seleccionado. Por favor selecciona Nacional o Estatal.")
+            print("No hay nivel seleccionado. Por favor selecciona Nacional o Estatal.")
             if self.placeholder_ref.current:
                 self.placeholder_ref.current.visible = True
             self.page.update()
             return
             
         if self.nivel_actual == "estatal" and self.estado_seleccionado is None:
-            print("❌ No hay estado seleccionado. Por favor selecciona un estado.")
+            print("No hay estado seleccionado. Por favor selecciona un estado.")
             if self.placeholder_ref.current:
                 self.placeholder_ref.current.visible = True
             self.page.update()
             return
 
-        print("✅ Todos los criterios seleccionados. Generando mapa...")
+        print("Todos los criterios seleccionados. Generando mapa...")
         
         if self.spinner_ref.current:
             self.spinner_ref.current.visible = True
@@ -611,22 +611,22 @@ class ModuloMapas:
             path = self.generar_mapa()
             print(f"Path generado: {path}")
             if path and os.path.exists(path):
-                print(f"✅ Archivo existe: {path}")
+                print(f"Archivo existe: {path}")
             else:
-                print(f"❌ Archivo no existe: {path}")
+                print(f"Archivo no existe: {path}")
 
             def _actualizar():
                 if self.spinner_ref.current:
                     self.spinner_ref.current.visible = False
                 if path:
-                    print("✅ Mapa generado correctamente, mostrando en pantalla.")
+                    print("Mapa generado correctamente, mostrando en pantalla.")
                     if self.img_ref.current:
                         self.img_ref.current.src = path
                         self.img_ref.current.visible = True
                     if self.placeholder_ref.current:
                         self.placeholder_ref.current.visible = False
                 else:
-                    print("❌ Error al generar el mapa. Verifica los datos seleccionados.")
+                    print("Error al generar el mapa. Verifica los datos seleccionados.")
                     if self.placeholder_ref.current:
                         self.placeholder_ref.current.visible = True
                 self.page.update()
@@ -640,13 +640,13 @@ class ModuloMapas:
 
     def _guardar_mapa(self, formato: str):
         if self.columna_activa is None or self.tema_activo is None:
-            print("❌ No se puede guardar: No hay tema seleccionado")
+            print("No se puede guardar: No hay tema seleccionado")
             return
         if self.nivel_actual is None:
-            print("❌ No se puede guardar: No hay nivel seleccionado")
+            print("No se puede guardar: No hay nivel seleccionado")
             return
         if self.nivel_actual == "estatal" and self.estado_seleccionado is None:
-            print("❌ No se puede guardar: No hay estado seleccionado")
+            print("No se puede guardar: No hay estado seleccionado")
             return
 
         from datetime import datetime
@@ -658,7 +658,7 @@ class ModuloMapas:
         os.makedirs(directorio, exist_ok=True)
         destino = os.path.join(directorio, nombre)
 
-        print(f"\n💾 Guardando mapa en: {destino}")
+        print(f"\nGuardando mapa en: {destino}")
         
         if self.nivel_actual == "nacional":
             fig = self._generar_figura_nacional(self.columna_activa, self.tema_activo)
@@ -666,18 +666,18 @@ class ModuloMapas:
             fig = self._generar_figura_estatal(self.columna_activa, self.tema_activo, self.estado_seleccionado)
 
         if fig is None:
-            print("❌ Error: No se pudo generar el mapa para guardar")
+            print("Error: No se pudo generar el mapa para guardar")
             return
 
         dpi = 200 if formato in ("PNG", "JPG") else 150
         fig.savefig(destino, format=formato.lower(), dpi=dpi, bbox_inches="tight")
         plt.close(fig)
         
-        print(f"✅ Mapa guardado exitosamente en: {destino}")
+        print(f"Mapa guardado exitosamente en: {destino}")
         
         def mostrar_mensaje():
             dialog = ft.AlertDialog(
-                title=ft.Text("✅ Mapa guardado"),
+                title=ft.Text("Mapa guardado"),
                 content=ft.Text(f"Archivo guardado en:\n{destino}"),
                 actions=[
                     ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
@@ -695,10 +695,10 @@ class ModuloMapas:
 
     def _dialogo_guardar(self, _):
         if self.columna_activa is None or self.tema_activo is None:
-            print("❌ No se puede guardar: No hay tema seleccionado")
+            print("No se puede guardar: No hay tema seleccionado")
             return
         if self.nivel_actual is None:
-            print("❌ No se puede guardar: No hay nivel seleccionado")
+            print("No se puede guardar: No hay nivel seleccionado")
             return
             
         formato_sel = ft.Ref[ft.RadioGroup]()
@@ -745,7 +745,7 @@ class ModuloMapas:
         self.page.expand = True
 
         def volver(_):
-            print("\n🔙 Volviendo al inicio...")
+            print("\nVolviendo al inicio...")
             sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             from inicio import mostrar_sistema_principal
             mostrar_sistema_principal(self.page, self.usuario_data)
@@ -863,10 +863,10 @@ class ModuloMapas:
 
         def _on_datos_listos(exito):
             if not exito:
-                print("❌ No se encontraron algunos archivos de datos")
+                print("No se encontraron algunos archivos de datos")
             else:
-                print("\n✅ Todos los datos cargados exitosamente")
-                print("📌 Esperando selección de usuario...")
+                print("\nTodos los datos cargados exitosamente")
+                print("Esperando selección de usuario...")
 
         self.cargar_datos_async(_on_datos_listos)
 
