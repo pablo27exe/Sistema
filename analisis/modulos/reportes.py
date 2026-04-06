@@ -518,7 +518,7 @@ class ModuloReportes:
                 self.page.update()
             
             dialog = ft.AlertDialog(
-                title=ft.Text("✅ Reporte exportado"),
+                title=ft.Text("Reporte exportado"),
                 content=ft.Text(f"Archivo guardado en:\n{destino}"),
                 actions=[
                     ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
@@ -619,7 +619,7 @@ class ModuloReportes:
                 self.page.update()
             
             dialog = ft.AlertDialog(
-                title=ft.Text("✅ Reporte exportado"),
+                title=ft.Text("Reporte exportado"),
                 content=ft.Text(f"Archivo guardado en:\n{destino}\n\nTotal de páginas: {n_paginas}"),
                 actions=[
                     ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog))
@@ -786,10 +786,10 @@ class ModuloReportes:
         # Carga de datos en segundo plano
         def _on_datos_listos(exito):
             if not exito:
-                print("❌ No se encontraron algunos archivos de datos")
+                print("No se encontraron algunos archivos de datos")
             else:
-                print("\n✅ Todos los datos cargados exitosamente")
-                print("📌 Esperando selección de usuario...")
+                print("\nTodos los datos cargados exitosamente")
+                print("Esperando selección de usuario...")
                 self._actualizar_lista_indicadores()
 
         self.cargar_datos_async(_on_datos_listos)
