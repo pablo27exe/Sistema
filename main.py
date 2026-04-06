@@ -125,7 +125,7 @@ def main(page: ft.Page):
                             # colors = ["#74c69d", "#95d5b2", "#b7e4c7"]
 
                             # Esmeralda
-                            # colors = ["#006d77", "#2a9d8f", "#52b788"]
+                            #colors = ["#006d77", "#2a9d8f", "#52b788"]
 
 
                             # ==================== TONOS PÚRPURA ====================
@@ -133,10 +133,10 @@ def main(page: ft.Page):
                             #colors = ["#6c5b7b", "#8e7d9e", "#b0a1c1"]
 
                             # Morado neón
-                            # colors = ["#7b2cbf", "#9d4edd", "#c77dff"]
+                            #colors = ["#7b2cbf", "#9d4edd", "#c77dff"]
 
                             # Malva
-                            # colors = ["#5e4b56", "#806b75", "#a28b95"]
+                            #colors = ["#5e4b56", "#806b75", "#a28b95"]
 
 
                             # ==================== GRADIENTES CONTRASTE ====================
@@ -152,7 +152,7 @@ def main(page: ft.Page):
 
                             # ==================== GRADIENTES MONOCROMÁTICOS ====================
                             # Gris elegante
-                            # colors = ["#2d3436", "#3b4448", "#4b5a5f"]
+                            #colors = ["#2d3436", "#3b4448", "#4b5a5f"]
 
                             # Beige cálido
                             # colors = ["#e3d9ca", "#d9ceb8", "#cfc3a6"]

@@ -119,19 +119,10 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
     )
 
     # --- Funciones para abrir cada módulo con diálogo ---
-    def abrir_gestion(e):
-        crear_dialogo(
-            "Gestión de Datos", 
-            "Módulo de gestión de datos - Funcionalidad en desarrollo",
-            "info"
-        )
 
     def abrir_graficos(e):
-        crear_dialogo(
-            "Generar Gráficos", 
-            "Módulo de generación de gráficos - Funcionalidad en desarrollo",
-            "info"
-        )
+        from modulos.graficos import abrir_modulo_graficos
+        abrir_modulo_graficos(page, usuario_data)
 
     def abrir_reportes(e):
         crear_dialogo(
@@ -174,13 +165,6 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         )
 
     cards = ft.Row([
-        modulo_card(
-            "Gestión de datos",
-            "Filtra por sector y alcance",
-            "analisis/assets/datos.ico",
-            ft.Colors.BLUE_100,
-            abrir_gestion
-        ),
         modulo_card(
             "Generar gráficos",
             "Visualizaciones con matplotlib",
