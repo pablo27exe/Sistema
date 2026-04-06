@@ -101,17 +101,15 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
     # --- Funciones para abrir cada módulo con diálogo ---
 
     def abrir_graficos(e):
-        from modulos.graficos import abrir_modulo_graficos
+        from analisis.modulos.graficos import abrir_modulo_graficos
         abrir_modulo_graficos(page, usuario_data)
 
     def abrir_reportes(e):
-        from modulos.reportes import abrir_modulo_reportes
+        from analisis.modulos.reportes import abrir_modulo_reportes
         abrir_modulo_reportes(page, usuario_data)
 
-    # En inicio.py, modificar la función abrir_mapas:
-
     def abrir_mapas(e):
-        from modulos.mapas import abrir_modulo_mapas
+        from analisis.modulos.mapas import abrir_modulo_mapas
         abrir_modulo_mapas(page, usuario_data)
 
     # --- Card con ícono e interacción ---
