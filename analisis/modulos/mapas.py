@@ -205,7 +205,39 @@ class ModuloMapas:
             print("Error: Falta columna 'clave_estado'")
             return None
 
-        df_agg = df.groupby("clave_estado")[columna].sum().reset_index()
+        # Limpiar columnas duplicadas en df
+        df = df.loc[:, ~df.columns.duplicated()]
+
+        # Detectar si es relativo (porcentaje) o absoluto
+        if "_rel" in tema:
+            # Para porcentajes: promedio ponderado por población total
+            df_poblacion = self.dfs["poblacion_abs"]
+            
+            # Limpiar columnas duplicadas en df_poblacion
+            df_poblacion = df_poblacion.loc[:, ~df_poblacion.columns.duplicated()]
+            
+            if "poblacion_total" not in df_poblacion.columns:
+                print("Error: No se encontró 'poblacion_total' en datos de población")
+                return None
+            
+            # Unir datos de porcentaje con población
+            df_temp = df.merge(
+                df_poblacion[["clave_municipio", "poblacion_total"]], 
+                on="clave_municipio", 
+                how="left"
+            )
+            
+            # Calcular promedio ponderado por estado
+            def calcular_promedio_ponderado(grupo):
+                numerador = (grupo[columna] * grupo["poblacion_total"]).sum()
+                denominador = grupo["poblacion_total"].sum()
+                return numerador / denominador if denominador > 0 else 0
+            
+            df_agg = df_temp.groupby("clave_estado").apply(calcular_promedio_ponderado).reset_index(name=columna)
+        else:
+            # Para valores absolutos: suma directa
+            df_agg = df.groupby("clave_estado")[columna].sum().reset_index()
+        
         gdf = self.gdf_estados.merge(df_agg, left_on="CVEGEO", right_on="clave_estado", how="left")
 
         fig, ax = plt.subplots(figsize=(16, 12))
@@ -213,15 +245,21 @@ class ModuloMapas:
         
         from matplotlib.ticker import FuncFormatter
         def formato_miles(x, p):
-            if x >= 1_000_000:
+            if "_rel" in tema:
+                return f'{x:.1f}%'
+            elif x >= 1_000_000:
                 return f'{x/1_000_000:.1f}M'
             elif x >= 1_000:
                 return f'{x/1_000:.0f}k'
             else:
                 return f'{x:,.0f}'
         
-        vmin = gdf[columna].min()
-        vmax = gdf[columna].max()
+        if "_rel" in tema:
+            vmin = 0
+            vmax = 100
+        else:
+            vmin = gdf[columna].min()
+            vmax = gdf[columna].max()
 
         gdf.plot(
             column=columna, 
@@ -242,7 +280,11 @@ class ModuloMapas:
             vmax=vmax
         )
         
-        ax.set_title(f"{self.titulo_activo} por Estado", fontsize=16, fontweight="bold", pad=20)
+        if "_rel" in tema:
+            ax.set_title(f"{self.titulo_activo} por Estado (porcentaje)", fontsize=16, fontweight="bold", pad=20)
+        else:
+            ax.set_title(f"{self.titulo_activo} por Estado", fontsize=16, fontweight="bold", pad=20)
+        
         plt.tight_layout()
         return fig
 

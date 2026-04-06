@@ -60,7 +60,6 @@ def _leer_csv(nombre_archivo: str, mapeo: dict) -> pd.DataFrame | None:
 
     return df
 
-
 # ── Población ───────────────────────────────────────────────────────────────
 
 def cargar_csv_poblacion(tipo: str = "abs") -> pd.DataFrame | None:
