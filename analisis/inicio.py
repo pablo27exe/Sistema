@@ -25,26 +25,6 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
             dialog.open = False
             page.update()
 
-    def crear_dialogo(titulo, mensaje, tipo="info"):
-        """Crea un diálogo estandarizado"""
-        colores = {
-            "error": ft.Colors.RED,
-            "exito": ft.Colors.GREEN,
-            "info": ft.Colors.BLUE
-        }
-        dialog = ft.AlertDialog(
-            title=ft.Text(titulo, color=colores.get(tipo, ft.Colors.BLACK)),
-            content=ft.Text(mensaje),
-            actions=[
-                ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogo(dialog)),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        page.overlay.append(dialog)
-        dialog.open = True
-        page.update()
-        return dialog
-
     def confirmar_cerrar_sesion(_):
         def on_confirmar(e):
             dialog.open = False
@@ -125,11 +105,8 @@ def mostrar_sistema_principal(page: ft.Page, usuario_data: dict, on_cerrar_sesio
         abrir_modulo_graficos(page, usuario_data)
 
     def abrir_reportes(e):
-        crear_dialogo(
-            "Reportes", 
-            "Módulo de reportes - Funcionalidad en desarrollo",
-            "info"
-        )
+        from modulos.reportes import abrir_modulo_reportes
+        abrir_modulo_reportes(page, usuario_data)
 
     # En inicio.py, modificar la función abrir_mapas:
 
