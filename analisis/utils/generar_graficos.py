@@ -3,9 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Configurar matplotlib para usar UTF-8 y evitar notación científica
+# Configurar matplotlib para usar UTF-8
 plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['axes.formatter.limits'] = (-6, 6)
 plt.rcParams['axes.formatter.use_mathtext'] = False
 
 def formatear_valor(valor):
@@ -46,12 +45,20 @@ def preparar_datos_para_grafico(df, columna, nivel, estado_seleccionado=None, no
         datos = datos.groupby("nombre_municipio")[columna].sum().reset_index()
         datos.columns = ["nombre", "valor"]
         datos = datos.sort_values("valor", ascending=False)
+        
+        # Limitar a los primeros 25 municipios (para estados con muchos municipios)
+        if len(datos) > 25:
+            datos = datos.head(25)
+        
         return datos
 
 
 def generar_grafico_barras(datos, titulo, xlabel="", ylabel=""):
     """Genera gráfico de barras - muestra todos los estados/municipios"""
     fig, ax = plt.subplots(figsize=(14, max(8, len(datos) * 0.3)))
+    
+    # Desactivar notación científica en el eje Y
+    ax.ticklabel_format(style='plain', axis='y', useOffset=False)
     
     # Mostrar todos los datos (sin limitar)
     colores = plt.cm.Blues(np.linspace(0.4, 0.9, len(datos)))[::-1]
@@ -76,6 +83,9 @@ def generar_grafico_barras(datos, titulo, xlabel="", ylabel=""):
 def generar_grafico_boxplot(datos, titulo, ylabel=""):
     """Genera box plot"""
     fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Desactivar notación científica en el eje Y
+    ax.ticklabel_format(style='plain', axis='y', useOffset=False)
     
     bp = ax.boxplot(datos["valor"], vert=True, patch_artist=True,
                     boxprops=dict(facecolor='lightblue', color='blue', linewidth=1.5),
@@ -104,6 +114,9 @@ def generar_grafico_boxplot(datos, titulo, ylabel=""):
 def generar_grafico_densidad(datos, titulo, xlabel=""):
     """Genera density plot (histograma + curva de densidad)"""
     fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Desactivar notación científica en el eje X
+    ax.ticklabel_format(style='plain', axis='x', useOffset=False)
     
     n, bins, patches = ax.hist(datos["valor"], bins=30, density=True, alpha=0.6, 
                                 color='lightblue', edgecolor='black', label='Histograma')
@@ -136,6 +149,9 @@ def generar_grafico_porcentaje(datos, titulo, xlabel=""):
     """Genera gráfico de barras de porcentaje (todos los datos normalizados a 100%)"""
     fig, ax = plt.subplots(figsize=(14, max(8, len(datos) * 0.3)))
     
+    # Desactivar notación científica en el eje Y
+    ax.ticklabel_format(style='plain', axis='y', useOffset=False)
+    
     total = datos["valor"].sum()
     porcentajes = (datos["valor"] / total) * 100
     
@@ -158,6 +174,9 @@ def generar_grafico_porcentaje(datos, titulo, xlabel=""):
 def generar_grafico_histograma(datos, titulo, xlabel=""):
     """Genera histograma destacando la media"""
     fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Desactivar notación científica en el eje X
+    ax.ticklabel_format(style='plain', axis='x', useOffset=False)
     
     n, bins, patches = ax.hist(datos["valor"], bins=20, edgecolor='black', alpha=0.7, color='lightblue')
     
@@ -187,6 +206,9 @@ def generar_grafico_lineas(datos, titulo, ylabel=""):
     """Genera gráfico de líneas (tendencia) - muestra todos los datos ordenados"""
     fig, ax = plt.subplots(figsize=(14, max(8, len(datos) * 0.2)))
     
+    # Desactivar notación científica en el eje Y
+    ax.ticklabel_format(style='plain', axis='y', useOffset=False)
+    
     # Ordenar por valor
     datos_ordenados = datos.sort_values("valor")
     
@@ -198,16 +220,19 @@ def generar_grafico_lineas(datos, titulo, ylabel=""):
     # Marcar puntos máximos y mínimos
     max_idx = datos_ordenados["valor"].idxmax()
     min_idx = datos_ordenados["valor"].idxmin()
-    ax.plot(datos_ordenados.index.get_loc(max_idx), datos_ordenados.loc[max_idx, "valor"], 
+    max_pos = datos_ordenados.index.get_loc(max_idx)
+    min_pos = datos_ordenados.index.get_loc(min_idx)
+    
+    ax.plot(max_pos, datos_ordenados.loc[max_idx, "valor"], 
             'ro', markersize=10, label='Máximo')
-    ax.plot(datos_ordenados.index.get_loc(min_idx), datos_ordenados.loc[min_idx, "valor"], 
+    ax.plot(min_pos, datos_ordenados.loc[min_idx, "valor"], 
             'go', markersize=10, label='Mínimo')
     
     # Etiquetas de valores en puntos extremos
-    ax.text(datos_ordenados.index.get_loc(max_idx), datos_ordenados.loc[max_idx, "valor"],
+    ax.text(max_pos, datos_ordenados.loc[max_idx, "valor"],
             f' {formatear_valor(datos_ordenados.loc[max_idx, "valor"])}', 
             va='bottom', fontsize=9, fontweight='bold')
-    ax.text(datos_ordenados.index.get_loc(min_idx), datos_ordenados.loc[min_idx, "valor"],
+    ax.text(min_pos, datos_ordenados.loc[min_idx, "valor"],
             f' {formatear_valor(datos_ordenados.loc[min_idx, "valor"])}', 
             va='top', fontsize=9, fontweight='bold')
     
