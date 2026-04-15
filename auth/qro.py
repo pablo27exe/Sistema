@@ -44,7 +44,7 @@ class GeneradorQR:
 
 
 # ── Eliminación diferida del archivo temporal ───────────────────────────────
-def _eliminar_tras_espera(ruta: str, segundos: int = 30) -> None:
+def _eliminar_tras_espera(ruta: str, segundos: int = 120) -> None:
     """Elimina el archivo de imagen después de segundos para dar tiempo a la transferencia."""
     def _tarea():
         time.sleep(segundos)

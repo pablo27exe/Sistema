@@ -392,8 +392,13 @@ class ModuloReportes:
                 if df is None or ind["columna"] not in df.columns:
                     continue
                 
-                # Agrupar por estado
-                df_agg = df.groupby("nombre_estado")[ind["columna"]].sum().reset_index()
+                # Agrupar por estado - CORREGIDO
+                if es_relativo:
+                    # Para porcentajes: promedio simple
+                    df_agg = df.groupby("nombre_estado")[ind["columna"]].mean().reset_index()
+                else:
+                    # Para valores absolutos: suma
+                    df_agg = df.groupby("nombre_estado")[ind["columna"]].sum().reset_index()
                 df_agg.columns = ["nombre", ind["columna"]]
                 
                 if df_principal is None:
@@ -420,9 +425,14 @@ class ModuloReportes:
                 if df is None or ind["columna"] not in df.columns:
                     continue
                 
-                # Filtrar por estado y agrupar por municipio
+                # Filtrar por estado y agrupar por municipio - CORREGIDO
                 df_estado = df[df["clave_estado"] == self.estado_seleccionado].copy()
-                df_agg = df_estado.groupby("nombre_municipio")[ind["columna"]].sum().reset_index()
+                if es_relativo:
+                    # Para porcentajes: promedio simple
+                    df_agg = df_estado.groupby("nombre_municipio")[ind["columna"]].mean().reset_index()
+                else:
+                    # Para valores absolutos: suma
+                    df_agg = df_estado.groupby("nombre_municipio")[ind["columna"]].sum().reset_index()
                 df_agg.columns = ["nombre", ind["columna"]]
                 
                 if df_principal is None:
